@@ -1,0 +1,256 @@
+<html>
+	<head>
+		<title>Mjolnir</title>
+		<style>
+
+		body {
+			font-family: Monospace;
+			background-color: #f0f0f0;
+			margin: 0px;
+			overflow: hidden;
+		}
+
+		canvas {
+			width: 100%;
+			height: 100%;
+		}
+
+	</style>
+		<script src="lib/three.min.js"></script>
+		<script src="lib/stats.min.js"></script>
+		<script src="lib/Coordinates.js"></script>
+		<script src="lib/OrbitControls.js"></script>
+		<script src="lib/OBJLoader.js"></script>
+	</head>
+	<body>
+
+		<script type="text/x-glsl" id="vertex">
+		varying vec3 transformedNormal;
+		varying vec3 pointPosition;
+
+		varying vec3 lightVector1;
+		uniform vec3 pointLightPosition1;
+
+		varying vec3 lightVector2;
+		uniform vec3 pointLightPosition2;
+
+		varying vec3 lightVector3;
+		uniform vec3 pointLightPosition3;
+
+		varying vec3 lightVector4;
+		uniform vec3 pointLightPosition4;
+
+		void main()
+		{
+			transformedNormal = normalMatrix * normal;
+			pointPosition = (modelViewMatrix * vec4( position, 1.0 )).xyz;
+
+			//Info prima luce
+			vec4 lPosition1 = viewMatrix * vec4( pointLightPosition1, 1.0 );
+			lightVector1 = lPosition1.xyz - pointPosition;
+
+			//Info seconda luce
+			vec4 lPosition2 = viewMatrix * vec4( pointLightPosition2, 1.0 );
+			lightVector2 = lPosition2.xyz - pointPosition;
+
+			//Info terza luce
+			vec4 lPosition3 = viewMatrix * vec4( pointLightPosition3, 1.0 );
+			lightVector3 = lPosition3.xyz - pointPosition;
+
+			//Info quarta luce
+			vec4 lPosition4 = viewMatrix * vec4( pointLightPosition4, 1.0 );
+			lightVector4 = lPosition4.xyz - pointPosition;
+
+			gl_Position = projectionMatrix * vec4(pointPosition,1.0);
+		}
+		</script>
+		
+		<script type="text/x-glsl" id="fragment">
+			uniform vec3 lightPower;
+			uniform vec3 c_spec; // surface specular color: equal to F(0)
+			uniform float alpha; // material roughness (increase for rougher surface)
+
+			varying vec3 transformedNormal;
+			varying vec3 pointPosition;
+
+			varying vec3 lightVector1;
+			varying vec3 lightVector2;
+			varying vec3 lightVector3;
+			varying vec3 lightVector4;
+
+			#define PI 3.14159265	
+
+			// compute the geometry term
+			float G(float LdotH)
+			{
+				return 1.0/pow(LdotH,2.0);
+			}
+
+			// compute Fresnel reflection term with Schlick approximation
+			vec3 F(float LdotH) {
+				return c_spec + (vec3(1.0) - c_spec)*pow(1.0-LdotH, 5.0);
+			}
+
+			// compute the normal distribution function, based on Trowbridge-Reitz
+			float D(float NdotH){
+				float A = pow(alpha,2.0);
+				float B = PI * pow(pow(NdotH,2.0)*(A-1.0) + 1.0, 2.0);
+				return A/B;
+			}
+
+			void main()
+			{
+				vec3  n      		 	= normalize( transformedNormal );  
+				vec3  v         		= normalize( -pointPosition );  
+
+				vec3  l1         		= normalize(  lightVector1 ); 
+				vec3  l2                = normalize(  lightVector2 );
+				vec3  l3                = normalize(  lightVector3 );
+				vec3  l4                = normalize(  lightVector4 );
+
+				vec3  h1         		= normalize(v  + l1 );
+				vec3  h2                = normalize(v  + l2 );
+				vec3  h3                = normalize(v  + l3 );
+				vec3  h4                = normalize(v  + l4 );
+
+				float  NdotH1    		= max(0.000001, dot( n, h1 ));  
+				float  VdotH1     		= max(0.000001, dot( v, h1 ));  
+				float  NdotV 			= max(0.000001, dot( n, v  ));  
+				float  NdotL1 			= max(0.000001, dot( n, l1 ));  
+
+				float  NdotH2    		= max(0.000001, dot( n, h2 ));  
+				float  VdotH2     		= max(0.000001, dot( v, h2 ));  
+				float  NdotL2 			= max(0.000001, dot( n, l2 ));  
+
+				float  NdotH3    		= max(0.000001, dot( n, h3 ));  
+				float  VdotH3     		= max(0.000001, dot( v, h3 ));  
+				float  NdotL3 			= max(0.000001, dot( n, l3 ));  
+
+				float  NdotH4    		= max(0.000001, dot( n, h4 ));  
+				float  VdotH4     		= max(0.000001, dot( v, h4 ));  
+				float  NdotL4 			= max(0.000001, dot( n, l4 )); 
+
+				// specular BRDF1
+				vec3 Specular1 = F(VdotH1) * G(VdotH1) * D(NdotH1) / 4.0;
+				vec3 beta1 = lightPower / ( 4.0  * PI * pow( length(lightVector1),2.0) );
+
+				// specular BRDF2
+				vec3 Specular2 = F(VdotH2) * G(VdotH2) * D(NdotH2) / 4.0;
+				vec3 beta2 = lightPower / ( 4.0  * PI * pow( length(lightVector2),2.0) );
+
+				// specular BRDF3
+				vec3 Specular3 = F(VdotH3) * G(VdotH3) * D(NdotH3) / 4.0;
+				vec3 beta3 = lightPower / ( 4.0  * PI * pow( length(lightVector3),2.0) );
+
+				// specular BRDF4
+				vec3 Specular4 = F(VdotH4) * G(VdotH4) * D(NdotH4) / 4.0;
+				vec3 beta4 = lightPower / ( 4.0  * PI * pow( length(lightVector4),2.0) );
+
+				//Colore del Frammento considerando tutte le luci
+				gl_FragColor = vec4(beta1 * NdotL1 * Specular1, 1.0) +
+							   vec4(beta2 * NdotL2 * Specular2, 1.0) +
+							   vec4(beta3 * NdotL3 * Specular3, 1.0) +
+							   vec4(beta4 * NdotL4 * Specular4, 1.0);
+				
+			}
+		</script>
+
+		<script>
+
+		var scene, camera, renderer, controls, stats, loader;
+
+		function Start() {
+			scene = new THREE.Scene();
+			camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+
+			renderer = new THREE.WebGLRenderer( {antialias: true} );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+
+			camera.position.set(60, 40, 40);
+			camera.lookAt( new THREE.Vector3(0,0,0));
+
+			var uniforms = {
+						c_spec:	{ type: "v3", value: new THREE.Vector3() },
+						pointLightPosition1:	{ type: "v3", value: new THREE.Vector3() },
+						pointLightPosition2:	{ type: "v3", value: new THREE.Vector3() },
+						pointLightPosition3:	{ type: "v3", value: new THREE.Vector3() },
+						pointLightPosition4:	{ type: "v3", value: new THREE.Vector3() },
+						lightPower:	{ type: "v3", value: new THREE.Vector3() },
+						alpha: {type: "f", value: 0}
+					};
+					
+			var vs = document.getElementById("vertex").textContent;
+			var fs = document.getElementById("fragment").textContent;
+			
+			var material = new THREE.ShaderMaterial({ uniforms: uniforms, vertexShader: vs, fragmentShader: fs });
+			//var material = new THREE.MeshBasicMaterial({color: 'yellow', side: THREE.DoubleSide});
+
+			var loader = new THREE.OBJLoader();
+			loader.load('models/hammer.obj', function (obj) {
+				obj.traverse(function (child) {
+					if (child instanceof THREE.Mesh) {
+						child.material = material;
+					}
+				});
+				scene.add(obj);
+				obj.scale.set(0.2, 0.2, 0.2);
+			});
+
+			//Setup luci scena
+			lightA = new THREE.Mesh( new THREE.SphereGeometry( 0.1, 0.1, 0.1),
+									 new THREE.MeshBasicMaterial ({color: 0xffffff, wireframe:true}));
+			lightA.position.set( 10.0, 4.0, 10.0 );
+			scene.add( lightA );
+			uniforms.pointLightPosition1.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
+
+			lightB = new THREE.Mesh( new THREE.SphereGeometry( 0.1, 0.1, 0.1), 
+									 new THREE.MeshBasicMaterial ({color: 0xffffff, wireframe:true}));
+			lightB.position.set( 0, 20.0, 0.0 );
+			scene.add( lightB );
+			uniforms.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
+
+			lightC = new THREE.Mesh( new THREE.SphereGeometry( 0.1, 0.1, 0.1), 
+									 new THREE.MeshBasicMaterial ({color: 0xffffff, wireframe:true}));
+			lightC.position.set( -10.0, 4.0, 10.0 );
+			scene.add( lightC );
+			uniforms.pointLightPosition3.value = new THREE.Vector3(lightC.position.x, lightC.position.y, lightC.position.z);
+
+			lightD = new THREE.Mesh( new THREE.SphereGeometry( 0.1, 0.1, 0.1), 
+									 new THREE.MeshBasicMaterial ({color: 0xffffff, wireframe:true}));
+			lightD.position.set( 10.0, 4.0, -10.0 );
+			scene.add( lightD );
+			uniforms.pointLightPosition4.value = new THREE.Vector3(lightD.position.x, lightD.position.y, lightD.position.z);
+
+			//Setup uniforms			
+			uniforms.c_spec.value = new THREE.Vector3( 1.0, 0.79, 0.29 ); 
+			uniforms.lightPower.value = new THREE.Vector3( 10000.0, 10000.0, 10000.0 );
+			uniforms.alpha.value = 0.5;
+			
+			stats = new Stats();
+			stats.domElement.style.position = 'absolute';
+			stats.domElement.style.top = '0px';
+			document.body.appendChild( stats.domElement );
+
+			controls = new THREE.OrbitControls( camera );
+			controls.addEventListener( 'change', Render );
+
+		}
+
+		function Update() {
+			requestAnimationFrame( Update );
+			controls.update();
+			stats.update();
+			Render();
+		}
+
+		function Render() {
+			renderer.render(scene, camera);
+		}
+
+		Start();
+		Update();
+
+		</script>
+	</body>
+</html>
