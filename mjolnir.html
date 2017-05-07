@@ -21,6 +21,7 @@
 		<script src="lib/Coordinates.js"></script>
 		<script src="lib/OrbitControls.js"></script>
 		<script src="lib/OBJLoader.js"></script>
+	    <script src="lib/dat.gui.min.js"></script>
 	</head>
 	<body>
 
@@ -159,7 +160,7 @@
 
 		var scene, camera, renderer, controls, stats, loader;
 
-		function Start() {
+		//function Start() {
 			scene = new THREE.Scene();
 			camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 
@@ -167,10 +168,12 @@
 			renderer.setSize( window.innerWidth, window.innerHeight );
 			document.body.appendChild( renderer.domElement );
 
+			//Posizionamento Camera
 			camera.position.set(60, 40, 40);
 			camera.lookAt( new THREE.Vector3(0,0,0));
 
-			var uniforms = {
+			//Setup shader uniforms
+			var uniformsGold = {
 						c_spec:	{ type: "v3", value: new THREE.Vector3() },
 						pointLightPosition1:	{ type: "v3", value: new THREE.Vector3() },
 						pointLightPosition2:	{ type: "v3", value: new THREE.Vector3() },
@@ -179,54 +182,102 @@
 						lightPower:	{ type: "v3", value: new THREE.Vector3() },
 						alpha: {type: "f", value: 0}
 					};
+			var uniformsSilver = {
+						c_spec:	{ type: "v3", value: new THREE.Vector3() },
+						pointLightPosition1:	{ type: "v3", value: new THREE.Vector3() },
+						pointLightPosition2:	{ type: "v3", value: new THREE.Vector3() },
+						pointLightPosition3:	{ type: "v3", value: new THREE.Vector3() },
+						pointLightPosition4:	{ type: "v3", value: new THREE.Vector3() },
+						lightPower:	{ type: "v3", value: new THREE.Vector3() },
+						alpha: {type: "f", value: 0}
+					};		
+			
 					
 			var vs = document.getElementById("vertex").textContent;
 			var fs = document.getElementById("fragment").textContent;
 			
-			var material = new THREE.ShaderMaterial({ uniforms: uniforms, vertexShader: vs, fragmentShader: fs });
-			//var material = new THREE.MeshBasicMaterial({color: 'yellow', side: THREE.DoubleSide});
+			var gold_material = new THREE.ShaderMaterial({ uniforms: uniformsGold, vertexShader: vs, fragmentShader: fs });
+			var silver_material = new THREE.ShaderMaterial({ uniforms: uniformsSilver, vertexShader: vs, fragmentShader: fs});
 
+/*
 			var loader = new THREE.OBJLoader();
 			loader.load('models/hammer.obj', function (obj) {
 				obj.traverse(function (child) {
 					if (child instanceof THREE.Mesh) {
-						child.material = material;
+						child.material = silver_material;
 					}
 				});
 				scene.add(obj);
 				obj.scale.set(0.2, 0.2, 0.2);
 			});
+*/
 
-			//Setup luci scena
-			lightA = new THREE.Mesh( new THREE.SphereGeometry( 0.1, 0.1, 0.1),
-									 new THREE.MeshBasicMaterial ({color: 0xffffff, wireframe:true}));
+			var childCounter = 0;
+			var loader = new THREE.OBJLoader();
+			loader.load( 'models/hammer.obj', function ( object ) {
+				object.traverse( function ( child ) {
+					if ( child instanceof THREE.Mesh ) {
+						if(childCounter == 0) {
+							child.material = silver_material;
+						}
+						else if(childCounter == 1) {
+							child.material = silver_material;
+						}
+						else if(childCounter == 2) {
+							child.material = silver_material;
+						}
+						else{
+							child.material = gold_material;
+						}
+						child.geometry.computeVertexNormals();
+						//scene.add(child);
+						//child.scale.set(0.2, 0.2, 0.2);
+						childCounter++;
+					}
+				} );
+				scene.add(object);
+				object.scale.set(0.2, 0.2, 0.2);
+			} );
+
+
+			//Geometria e Materiale per le luci
+			geometryLight = new THREE.SphereGeometry( 0.05, 0.05, 0.05);
+			materialLight = new THREE.MeshBasicMaterial ({color: 0xffffff, wireframe:true});
+			//Setup luci scena su ogni materiale
+			//Prima Luce
+			lightA = new THREE.Mesh( geometryLight, materialLight);
 			lightA.position.set( 10.0, 4.0, 10.0 );
 			scene.add( lightA );
-			uniforms.pointLightPosition1.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
-
-			lightB = new THREE.Mesh( new THREE.SphereGeometry( 0.1, 0.1, 0.1), 
-									 new THREE.MeshBasicMaterial ({color: 0xffffff, wireframe:true}));
-			lightB.position.set( 0, 20.0, 0.0 );
+			uniformsGold.pointLightPosition1.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
+			uniformsSilver.pointLightPosition1.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
+			//Seconda Luce
+			lightB = new THREE.Mesh( geometryLight, materialLight);
+			lightB.position.set( 0, 30.0, 0.0 );
 			scene.add( lightB );
-			uniforms.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
-
-			lightC = new THREE.Mesh( new THREE.SphereGeometry( 0.1, 0.1, 0.1), 
-									 new THREE.MeshBasicMaterial ({color: 0xffffff, wireframe:true}));
+			uniformsGold.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
+			uniformsSilver.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
+			//Terza Luce
+			lightC = new THREE.Mesh( geometryLight, materialLight);
 			lightC.position.set( -10.0, 4.0, 10.0 );
 			scene.add( lightC );
-			uniforms.pointLightPosition3.value = new THREE.Vector3(lightC.position.x, lightC.position.y, lightC.position.z);
-
-			lightD = new THREE.Mesh( new THREE.SphereGeometry( 0.1, 0.1, 0.1), 
-									 new THREE.MeshBasicMaterial ({color: 0xffffff, wireframe:true}));
+			uniformsGold.pointLightPosition3.value = new THREE.Vector3(lightC.position.x, lightC.position.y, lightC.position.z);
+			uniformsSilver.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
+			//Quarta Luce
+			lightD = new THREE.Mesh( geometryLight, materialLight);
 			lightD.position.set( 10.0, 4.0, -10.0 );
 			scene.add( lightD );
-			uniforms.pointLightPosition4.value = new THREE.Vector3(lightD.position.x, lightD.position.y, lightD.position.z);
-
+			uniformsGold.pointLightPosition4.value = new THREE.Vector3(lightD.position.x, lightD.position.y, lightD.position.z);
+			uniformsSilver.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
 			//Setup uniforms			
-			uniforms.c_spec.value = new THREE.Vector3( 1.0, 0.79, 0.29 ); 
-			uniforms.lightPower.value = new THREE.Vector3( 10000.0, 10000.0, 10000.0 );
-			uniforms.alpha.value = 0.5;
+			uniformsGold.c_spec.value = new THREE.Vector3( 1.0, 0.79, 0.29 );
+			uniformsGold.lightPower.value = new THREE.Vector3( 10000.0, 10000.0, 10000.0 );
+			uniformsGold.alpha.value = 0.5;
+
+			uniformsSilver.c_spec.value = new THREE.Vector3( 0.8, 0.8, 0.8 );
+			uniformsSilver.lightPower.value = new THREE.Vector3( 10000.0, 10000.0, 10000.0 );
+			uniformsSilver.alpha.value = 0.5;
 			
+
 			stats = new Stats();
 			stats.domElement.style.position = 'absolute';
 			stats.domElement.style.top = '0px';
@@ -234,11 +285,22 @@
 
 			controls = new THREE.OrbitControls( camera );
 			controls.addEventListener( 'change', Render );
+			//Limito la distanza a cui posso andare dall'oggetto per evitare attraversamenti
+			controls.minDistance = 18;
 
-		}
+			var params;
+			var guiParameters = function() {
+				this.alpha = 0.5;
+			}
+			params = new guiParameters();
+				var gui = new dat.GUI();
+				gui.add( params, "alpha", 0.0,7.0 );
+
+		//}
 
 		function Update() {
 			requestAnimationFrame( Update );
+			
 			controls.update();
 			stats.update();
 			Render();
@@ -246,9 +308,9 @@
 
 		function Render() {
 			renderer.render(scene, camera);
+			uniformsGold.alpha.value = params.alpha;
 		}
 
-		Start();
 		Update();
 
 		</script>
