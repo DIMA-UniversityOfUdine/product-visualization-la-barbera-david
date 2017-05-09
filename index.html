@@ -1,0 +1,480 @@
+<!doctype html>
+<html class="no-js" lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mjolnir Visualizer</title>
+    <link rel="stylesheet" href="css/foundation.css">
+    <link rel="stylesheet" href="css/app.css">
+
+    <script src="lib/three.min.js"></script>
+    <script src="lib/stats.min.js"></script>
+    <script src="lib/Coordinates.js"></script>
+    <script src="lib/OrbitControls.js"></script>
+    <script src="lib/OBJLoader.js"></script>
+    <script src="lib/dat.gui.min.js"></script>
+
+  </head>
+  <body>
+
+  <script type="text/x-glsl" id="vertex">
+		varying vec3 transformedNormal;
+		varying vec3 pointPosition;
+
+		varying vec3 lightVector1;
+		uniform vec3 pointLightPosition1;
+
+		varying vec3 lightVector2;
+		uniform vec3 pointLightPosition2;
+
+		varying vec3 lightVector3;
+		uniform vec3 pointLightPosition3;
+
+		varying vec3 lightVector4;
+		uniform vec3 pointLightPosition4;
+
+		void main()
+		{
+			transformedNormal = normalMatrix * normal;
+			pointPosition = (modelViewMatrix * vec4( position, 1.0 )).xyz;
+
+			//Info prima luce
+			vec4 lPosition1 = viewMatrix * vec4( pointLightPosition1, 1.0 );
+			lightVector1 = lPosition1.xyz - pointPosition;
+
+			//Info seconda luce
+			vec4 lPosition2 = viewMatrix * vec4( pointLightPosition2, 1.0 );
+			lightVector2 = lPosition2.xyz - pointPosition;
+
+			//Info terza luce
+			vec4 lPosition3 = viewMatrix * vec4( pointLightPosition3, 1.0 );
+			lightVector3 = lPosition3.xyz - pointPosition;
+
+			//Info quarta luce
+			vec4 lPosition4 = viewMatrix * vec4( pointLightPosition4, 1.0 );
+			lightVector4 = lPosition4.xyz - pointPosition;
+
+			gl_Position = projectionMatrix * vec4(pointPosition,1.0);
+		}
+		</script>
+
+  <script type="text/x-glsl" id="fragment">
+			uniform vec3 lightPower;
+			uniform vec3 c_spec; // surface specular color: equal to F(0)
+			uniform float alpha; // material roughness (increase for rougher surface)
+
+			varying vec3 transformedNormal;
+			varying vec3 pointPosition;
+
+			varying vec3 lightVector1;
+			varying vec3 lightVector2;
+			varying vec3 lightVector3;
+			varying vec3 lightVector4;
+
+			#define PI 3.14159265
+
+			// compute the geometry term
+			float G(float LdotH)
+			{
+				return 1.0/pow(LdotH,2.0);
+			}
+
+			// compute Fresnel reflection term with Schlick approximation
+			vec3 F(float LdotH) {
+				return c_spec + (vec3(1.0) - c_spec)*pow(1.0-LdotH, 5.0);
+			}
+
+			// compute the normal distribution function, based on Trowbridge-Reitz
+			float D(float NdotH){
+				float A = pow(alpha,2.0);
+				float B = PI * pow(pow(NdotH,2.0)*(A-1.0) + 1.0, 2.0);
+				return A/B;
+			}
+
+			void main()
+			{
+				vec3  n      		 	= normalize( transformedNormal );
+				vec3  v         		= normalize( -pointPosition );
+
+				vec3  l1         		= normalize(  lightVector1 );
+				vec3  l2                = normalize(  lightVector2 );
+				vec3  l3                = normalize(  lightVector3 );
+				vec3  l4                = normalize(  lightVector4 );
+
+				vec3  h1         		= normalize(v  + l1 );
+				vec3  h2                = normalize(v  + l2 );
+				vec3  h3                = normalize(v  + l3 );
+				vec3  h4                = normalize(v  + l4 );
+
+				float  NdotH1    		= max(0.000001, dot( n, h1 ));
+				float  VdotH1     		= max(0.000001, dot( v, h1 ));
+				float  NdotV 			= max(0.000001, dot( n, v  ));
+				float  NdotL1 			= max(0.000001, dot( n, l1 ));
+
+				float  NdotH2    		= max(0.000001, dot( n, h2 ));
+				float  VdotH2     		= max(0.000001, dot( v, h2 ));
+				float  NdotL2 			= max(0.000001, dot( n, l2 ));
+
+				float  NdotH3    		= max(0.000001, dot( n, h3 ));
+				float  VdotH3     		= max(0.000001, dot( v, h3 ));
+				float  NdotL3 			= max(0.000001, dot( n, l3 ));
+
+				float  NdotH4    		= max(0.000001, dot( n, h4 ));
+				float  VdotH4     		= max(0.000001, dot( v, h4 ));
+				float  NdotL4 			= max(0.000001, dot( n, l4 ));
+
+				// specular BRDF1
+				vec3 Specular1 = F(VdotH1) * G(VdotH1) * D(NdotH1) / 4.0;
+				vec3 beta1 = lightPower / ( 4.0  * PI * pow( length(lightVector1),2.0) );
+
+				// specular BRDF2
+				vec3 Specular2 = F(VdotH2) * G(VdotH2) * D(NdotH2) / 4.0;
+				vec3 beta2 = lightPower / ( 4.0  * PI * pow( length(lightVector2),2.0) );
+
+				// specular BRDF3
+				vec3 Specular3 = F(VdotH3) * G(VdotH3) * D(NdotH3) / 4.0;
+				vec3 beta3 = lightPower / ( 4.0  * PI * pow( length(lightVector3),2.0) );
+
+				// specular BRDF4
+				vec3 Specular4 = F(VdotH4) * G(VdotH4) * D(NdotH4) / 4.0;
+				vec3 beta4 = lightPower / ( 4.0  * PI * pow( length(lightVector4),2.0) );
+
+				//Colore del Frammento considerando tutte le luci
+				gl_FragColor = vec4(beta1 * NdotL1 * Specular1, 1.0) +
+							   vec4(beta2 * NdotL2 * Specular2, 1.0) +
+							   vec4(beta3 * NdotL3 * Specular3, 1.0) +
+							   vec4(beta4 * NdotL4 * Specular4, 1.0);
+
+			}
+		</script>
+
+  <script type="text/x-glsl" id="vertex_texture_ice">
+		varying vec3 transformedNormal;
+		varying vec3 pointPosition;
+		varying vec3 lightVector;
+		varying vec2 uVv;
+		uniform vec3 pointLightPosition;
+
+		void main()
+		{
+			transformedNormal = normalMatrix * normal;
+			pointPosition = (modelViewMatrix * vec4( position, 1.0 )).xyz;
+			vec4 lPosition = viewMatrix * vec4( pointLightPosition, 1.0 );
+			lightVector = lPosition.xyz - pointPosition;
+			uVv = uv;
+			gl_Position = projectionMatrix * vec4(pointPosition,1.0);
+		}
+		</script>
+
+  <script type="text/x-glsl" id="fragment_texture_ice">
+			uniform vec3 lightPower;
+			uniform sampler2D specularMap; // surface specular color: equal to F(0)
+			uniform sampler2D glossMap; // material roughness
+			uniform sampler2D diffuseMap; // surface diffuse color
+			uniform float s; // ratio of diffuse lighting
+
+			varying vec3 transformedNormal;
+			varying vec3 pointPosition;
+			varying vec3 lightVector;
+			varying vec2 uVv;
+
+			#define PI 3.14159265
+
+			// compute the geometry term
+			float G(float LdotH)
+			{
+				return 1.0/pow(LdotH,2.0);
+			}
+
+			// compute Fresnel reflection term with Schlick approximation
+			vec3 F(float LdotH) {
+				vec3 c_spec = texture2D(specularMap,uVv).rgb;
+				return c_spec + (1.0 - c_spec)*pow(1.0-LdotH, 5.0);
+			}
+
+			// compute the normal distribution function, based on Trowbridge-Reitz
+			float D(float NdotH){
+				float alpha = 1.0-texture2D(glossMap,uVv).r;
+				float A = pow(alpha,2.0);
+				float B = PI * pow(pow(NdotH,2.0)*(A-1.0) + 1.0, 2.0);
+				return A/B;
+			}
+
+			void main()
+			{
+				vec3  n      		 	= normalize( transformedNormal );
+				vec3  v         		= normalize( -pointPosition );
+				vec3  l         		= normalize(  lightVector );
+				vec3  h          		= normalize( v+l );
+				float  NdotH    		= max(0.000001, dot( n, h ));
+				float  VdotH     		= max(0.000001, dot( v, h ));
+				float  NdotV 			= max(0.000001, dot( n, v ));
+				float  NdotL 			= max(0.000001, dot( n, l ));
+				// specular BRDF
+				vec3 Specular = F(VdotH) * G(VdotH) * D(NdotH) / 4.0;
+				vec3 beta = lightPower / ( 4.0  * PI * pow( length(lightVector),2.0) );
+				vec3 c_diff = texture2D( diffuseMap, uVv).rgb;
+				gl_FragColor = vec4(beta * NdotL * ( s*c_diff + (1.0-s)*Specular), 1.0);
+			}
+		</script>
+
+  <div class="top-bar">
+    <div class="top-bar-title"></div>
+    <strong>Mjolnir Visualizer</strong>
+    <div>
+      <div class="top-bar-left"></div>
+      <div class="top-bar-right"></div>
+    </div>
+  </div>
+
+  <div class="row">
+      <div class="large-2 medium-2 small-2 columns">
+          <ul class="menu vertical" id="mymenu">
+              <li class="menu-text">Customize</li>
+              <p id="hint">( Default is Metallic Mjolnir )</p>
+              <li><a class="button expanded" href='javascript:click_show_base()'>Show Base</a></li>
+              <br />
+              <li><a class="button expanded" href='#'>Hide Base</a></li>
+              <br />
+              <li><a class="button expanded" href="#">Hammer Toy</a></li>
+              <br />
+              <li><a class="button expanded" href="javascript:click_show_metallic()">Metallic Mjolnir</a></li>
+              <br />
+              <li><a class="button expanded" href="#">Show Enviroment</a></li>
+          </ul>
+      </div>
+      <div class="large-10 medium-10 small-10 columns ">
+              <canvas class="large-10 medium-10 small-10 columns " id="threejs" width="1024" height="576" ></canvas>
+      </div>
+  </div>
+
+  <script>
+
+      window.addEventListener( 'resize', onWindowResize, false );
+
+    var scene, camera, renderer, controls, stats, loader;
+
+      var click_base = false;
+      var click_metallico = false;
+      var click_giocattolo = false;
+
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera( 75, 1024 / 576, 0.1, 1000 );
+
+    //Prendo l'elemento che fungerà da contenitore al mio renderer tramite il suo id
+    var container = document.getElementById("threejs");
+
+    renderer = new THREE.WebGLRenderer( {canvas: threejs} );
+    //Adatto le dimensioni del renderer a quelle del canvas usato
+    renderer.setSize( container.width, container.height );
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.top = '50px';
+      renderer.domElement.style.left = '190px';
+    renderer.setClearColor( 0xbdbdbd );
+    document.body.appendChild( renderer.domElement );
+
+    //Posizionamento Camera
+    camera.position.set(60, 40, 40);
+    camera.lookAt( new THREE.Vector3(0,0,0));
+
+    //Setup shader uniforms
+    var uniformsGold = {
+      c_spec:	{ type: "v3", value: new THREE.Vector3() },
+      pointLightPosition1:	{ type: "v3", value: new THREE.Vector3() },
+      pointLightPosition2:	{ type: "v3", value: new THREE.Vector3() },
+      pointLightPosition3:	{ type: "v3", value: new THREE.Vector3() },
+      pointLightPosition4:	{ type: "v3", value: new THREE.Vector3() },
+      lightPower:	{ type: "v3", value: new THREE.Vector3() },
+      alpha: {type: "f", value: 0}
+    };
+    var uniformsSilver = {
+      c_spec:	{ type: "v3", value: new THREE.Vector3() },
+      pointLightPosition1:	{ type: "v3", value: new THREE.Vector3() },
+      pointLightPosition2:	{ type: "v3", value: new THREE.Vector3() },
+      pointLightPosition3:	{ type: "v3", value: new THREE.Vector3() },
+      pointLightPosition4:	{ type: "v3", value: new THREE.Vector3() },
+      lightPower:	{ type: "v3", value: new THREE.Vector3() },
+      alpha: {type: "f", value: 0}
+    };
+
+
+    var vs = document.getElementById("vertex").textContent;
+    var fs = document.getElementById("fragment").textContent;
+
+    var gold_material = new THREE.ShaderMaterial({ uniforms: uniformsGold, vertexShader: vs, fragmentShader: fs });
+    var silver_material = new THREE.ShaderMaterial({ uniforms: uniformsSilver, vertexShader: vs, fragmentShader: fs});
+
+    // Texture info setup
+    var diffuseMap = THREE.ImageUtils.loadTexture( "media/Ice_Diffuse.png" );
+    var specularMap = THREE.ImageUtils.loadTexture( "media/Ice_Specular.png" );
+    var glossMap = THREE.ImageUtils.loadTexture( "media/Ice_Glossiness.png" );
+
+    diffuseMap.minFilter = THREE.LinearMipMapLinearFilter; diffuseMap.anisotropy = renderer.getMaxAnisotropy();
+    specularMap.minFilter = THREE.LinearMipMapLinearFilter; specularMap.anisotropy = renderer.getMaxAnisotropy();
+    glossMap.minFilter = THREE.LinearMipMapLinearFilter; glossMap.anisotropy = renderer.getMaxAnisotropy();
+
+    var uniforms_texture = {
+      specularMap: { type: "t", value: specularMap},
+      diffuseMap:	{ type: "t", value: diffuseMap},
+      glossMap:	{ type: "t", value: glossMap},
+      pointLightPosition:	{ type: "v3", value: new THREE.Vector3() },
+      lightPower:	{ type: "v3", value: new THREE.Vector3() },
+      alpha: {type: "f", value: 0},
+      s: {type: "f", value: 0},
+    };
+
+    var vs_t = document.getElementById("vertex_texture_ice").textContent;
+    var fs_t = document.getElementById("fragment_texture_ice").textContent;
+
+    var texture_material = new THREE.ShaderMaterial({ uniforms: uniforms_texture, vertexShader: vs_t, fragmentShader: fs_t });
+
+    Metallic_Hammer();
+
+    //Geometria e Materiale per le luci
+    geometryLight = new THREE.SphereGeometry( 0.05, 0.05, 0.05);
+    materialLight = new THREE.MeshBasicMaterial ({color: 0xffffff, wireframe:true});
+    //Setup luci scena su ogni materiale
+    //Prima Luce
+    lightA = new THREE.Mesh( geometryLight, materialLight);
+    lightA.position.set( 10.0, 4.0, 10.0 );
+    scene.add( lightA );
+    uniformsGold.pointLightPosition1.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
+    uniformsSilver.pointLightPosition1.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
+    //Seconda Luce
+    lightB = new THREE.Mesh( geometryLight, materialLight);
+    lightB.position.set( 0, 30.0, 0.0 );
+    scene.add( lightB );
+    uniformsGold.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
+    uniformsSilver.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
+    //Terza Luce
+    lightC = new THREE.Mesh( geometryLight, materialLight);
+    lightC.position.set( -10.0, 4.0, 10.0 );
+    scene.add( lightC );
+    uniformsGold.pointLightPosition3.value = new THREE.Vector3(lightC.position.x, lightC.position.y, lightC.position.z);
+    uniformsSilver.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
+    //Quarta Luce
+    lightD = new THREE.Mesh( geometryLight, materialLight);
+    lightD.position.set( 10.0, 4.0, -10.0 );
+    scene.add( lightD );
+    uniformsGold.pointLightPosition4.value = new THREE.Vector3(lightD.position.x, lightD.position.y, lightD.position.z);
+    uniformsSilver.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
+    //Setup uniforms
+    uniformsGold.c_spec.value = new THREE.Vector3( 1.0, 0.79, 0.29 );
+    uniformsGold.lightPower.value = new THREE.Vector3( 9000.0, 9000.0, 9000.0 );
+    uniformsGold.alpha.value = 0.5;
+
+    uniformsSilver.c_spec.value = new THREE.Vector3( 0.8, 0.8, 0.8 );
+    uniformsSilver.lightPower.value = new THREE.Vector3( 9000.0, 9000.0, 9000.0 );
+    uniformsSilver.alpha.value = 0.5;
+
+    //Texture uniforms data
+    uniforms_texture.pointLightPosition.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
+    uniforms_texture.lightPower.value = new THREE.Vector3( 9000.0, 9000.0, 9000.0 );
+    uniforms_texture.alpha.value = 0.9;
+    uniforms_texture.s.value = 0.3;
+
+
+    stats = new Stats();
+    stats.domElement.style.position = 'relative';
+    stats.domElement.style.top = '0px';
+    document.body.appendChild( stats.domElement );
+
+    controls = new THREE.OrbitControls( camera );
+    controls.addEventListener( 'change', Render );
+    //Limito la distanza a cui posso andare dall'oggetto per evitare attraversamenti
+    controls.minDistance = 18;
+    controls.maxDistance = 100;
+      //limito l'angolo di rotazione così da non poter andare sotto al materiale;
+    controls.minPolarAngle = 0;
+    controls.maxPolarAngle = Math.PI/2;
+
+    function Update() {
+      requestAnimationFrame( Update );
+        //Se clickBase è true allora visualizzo la base
+        if(click_base){
+            showBase(scene, texture_material);
+            //lo setto di nuovo a false per evitare l'aggiunta ad ogni frame
+            click_base = false;
+        }
+        if(click_metallico){
+            Metallic_Hammer();
+            click_metallico = false;
+        }
+
+      controls.update();
+      stats.update();
+      Render();
+    }
+
+    function Render() {
+      renderer.render(scene, camera);
+    }
+
+    //Funzione per caricare la base su cui posa il martello
+    function showBase(scena, texture) {
+      //Posiziono la base che verrà visualizzata la maggior parte del tempo
+      var geom = new THREE.CylinderGeometry( 25, 25, 0.05, 32 );
+      var mesh = new THREE.Mesh( geom, texture );
+      mesh.position.y = -9;
+      scena.add( mesh );
+    }
+
+      function onWindowResize(){
+          //Se le dimensioni della finestra diventano eccessive
+          //sposto il canvas per non coprire il menù
+          if(window.innerWidth > 1400){
+              renderer.domElement.style.left = '500px';
+          }else{
+              renderer.domElement.style.left = '190px';
+          }
+
+      }
+      //Funzione che ascolta il click del pulsante Show Base
+      function click_show_base() {
+          click_base = true;
+      }
+
+      //Funzione che ascolta il click sul pulsante metallic mjolnir
+      function click_show_metallic() {
+          click_metallico = true;
+      }
+
+      //Funzione per visualizzare la versione metallica del martello
+      function Metallic_Hammer() {
+          var childCounter = 0;
+          var loader = new THREE.OBJLoader();
+          loader.load( 'models/hammer.obj', function ( object ) {
+              object.traverse( function ( child ) {
+                  if ( child instanceof THREE.Mesh ) {
+                      if(childCounter == 0) {
+                          child.material = silver_material;
+                      }
+                      else if(childCounter == 1) {
+                          child.material = silver_material;
+                      }
+                      else if(childCounter == 2) {
+                          child.material = silver_material;
+                      }
+                      else{
+                          child.material = gold_material;
+                      }
+                      child.geometry.computeVertexNormals();
+                      childCounter++;
+                  }
+              } );
+              scene.add(object);
+              //Ridimensiono e ruoto
+              object.scale.set(0.2, 0.2, 0.2);
+              object.rotation.z = -(45 * Math.PI/180);
+          } );
+      }
+
+
+      Update();
+
+  </script>
+
+  </body>
+
+</html>

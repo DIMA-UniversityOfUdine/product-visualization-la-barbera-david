@@ -1,0 +1,15 @@
+#mymenu{
+    position: static;
+    float: left;
+}
+
+.button:hover,
+.button:focus{
+    background-color: #0c3d5d;
+}
+
+#hint{
+    font-size: 12px;
+    text-align: center;
+    color: #5e5e5e;
+}
