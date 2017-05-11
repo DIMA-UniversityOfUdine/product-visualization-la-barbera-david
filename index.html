@@ -149,83 +149,206 @@
 			}
 		</script>
 
-  <script type="text/x-glsl" id="vertex_texture_ice">
-		varying vec3 transformedNormal;
-		varying vec3 pointPosition;
-		varying vec3 lightVector;
-		varying vec2 uVv;
-		uniform vec3 pointLightPosition;
+        <script type="text/x-glsl" id="vertex_combined">
+            varying vec3 vNormal;
+            varying vec3 vPosition;
 
-		void main()
-		{
-			transformedNormal = normalMatrix * normal;
-			pointPosition = (modelViewMatrix * vec4( position, 1.0 )).xyz;
-			vec4 lPosition = viewMatrix * vec4( pointLightPosition, 1.0 );
-			lightVector = lPosition.xyz - pointPosition;
+            void main() {
+                vec4 vPos = modelViewMatrix * vec4( position, 1.0 );
+                vPosition = vPos.xyz;
+                vNormal = normalMatrix * normal;
+                gl_Position = projectionMatrix * vPos;
+            }
+		</script>
+
+		<script type="text/x-glsl" id="fragment_combined">
+			varying vec3 vNormal;
+			varying vec3 vPosition;
+
+			uniform vec3 pointLightPosition; // in world space
+			uniform vec3 pointLightPosition2;
+			uniform vec3 pointLightPosition3;
+			uniform vec3 pointLightPosition4;
+
+			uniform vec3 clight;
+			uniform vec3 cspec;
+			uniform vec3 cdiff;
+			uniform float roughness;
+			const float PI = 3.14159;
+
+			vec3 FSchlick(float lDoth) {
+				return (cspec + (vec3(1.0)-cspec)*pow(1.0 - lDoth,5.0));
+			}
+
+			float DGGX(float nDoth, float alpha) {
+				float alpha2 = alpha*alpha;
+				float d = nDoth*nDoth*(alpha2-1.0)+1.0;
+				return (  alpha2 / (PI*d*d));
+			}
+
+			float G1(float dotProduct, float k) {
+				return (dotProduct / (dotProduct*(1.0-k) + k) );
+			}
+
+			float GSmith(float nDotv, float nDotl) {
+					float k = roughness*roughness;
+					return G1(nDotl,k)*G1(nDotv,k);
+			}
+
+			void main() {
+				vec4 lPosition = viewMatrix * vec4( pointLightPosition, 1.0 );
+				vec4 lPosition2 = viewMatrix * vec4(pointLightPosition2,1.0 );
+				vec4 lPosition3 = viewMatrix * vec4(pointLightPosition3,1.0 );
+				vec4 lPosition4 = viewMatrix * vec4(pointLightPosition4,1.0 );
+
+				vec3 l = normalize(lPosition.xyz - vPosition.xyz);
+				vec3 l2= normalize(lPosition2.xyz- vPosition.xyz);
+				vec3 l3= normalize(lPosition3.xyz- vPosition.xyz);
+				vec3 l4= normalize(lPosition4.xyz- vPosition.xyz);
+
+				vec3 n = normalize( vNormal );  // interpolation destroys normalization, so we have to normalize
+				vec3 v = normalize( -vPosition);
+
+				vec3 h  = normalize( v + l );
+				vec3 h2 = normalize( v + l2);
+                vec3 h3 = normalize( v + l3);
+                vec3 h4 = normalize( v + l4);
+
+				// small quantity to prevent divisions by 0
+				float nDotl = max(dot( n, l ),0.000001);
+				float lDoth = max(dot( l, h ),0.000001);
+				float nDoth = max(dot( n, h ),0.000001);
+				float vDoth = max(dot( v, h ),0.000001);
+
+				float nDotv = max(dot( n, v ),0.000001);
+
+				float nDotl2 = max(dot( n, l2 ),0.000001);
+				float lDoth2 = max(dot( l2, h2),0.000001);
+				float nDoth2 = max(dot( n, h2 ),0.000001);
+				float vDoth2 = max(dot( v, h2 ),0.000001);
+
+				float nDotl3 = max(dot( n, l3 ),0.000001);
+				float lDoth3 = max(dot( l3, h3),0.000001);
+				float nDoth3 = max(dot( n, h3 ),0.000001);
+				float vDoth3 = max(dot( v, h3 ),0.000001);
+
+				float nDotl4 = max(dot( n, l4 ),0.000001);
+				float lDoth4 = max(dot( l4, h4),0.000001);
+				float nDoth4 = max(dot( n, h4 ),0.000001);
+				float vDoth4 = max(dot( v, h4 ),0.000001);
+
+				vec3 fresnel = FSchlick(lDoth);
+				vec3 BRDF = (vec3(1.0)-fresnel)*cdiff/PI + fresnel*GSmith(nDotv,nDotl)*DGGX(nDoth,roughness*roughness)/(4.0*nDotl*nDotv);
+
+				vec3 fresnel2 = FSchlick(lDoth2);
+				vec3 BRDF2 = (vec3(1.0)-fresnel2)*cdiff/PI + fresnel2*GSmith(nDotv,nDotl2)*DGGX(nDoth2,roughness*roughness)/(4.0*nDotl2*nDotv);
+
+                vec3 fresnel3 = FSchlick(lDoth3);
+				vec3 BRDF3 = (vec3(1.0)-fresnel3)*cdiff/PI + fresnel3*GSmith(nDotv,nDotl3)*DGGX(nDoth3,roughness*roughness)/(4.0*nDotl3*nDotv);
+
+                vec3 fresnel4 = FSchlick(lDoth4);
+				vec3 BRDF4 = (vec3(1.0)-fresnel4)*cdiff/PI + fresnel4*GSmith(nDotv,nDotl4)*DGGX(nDoth4,roughness*roughness)/(4.0*nDotl4*nDotv);
+
+
+				vec3 outRadiance = (PI* clight * nDotl * BRDF)  +
+				                   (PI* clight * nDotl2 * BRDF2)+
+				                   (PI* clight * nDotl3 * BRDF3)+
+				                   (PI* clight * nDotl4 * BRDF4);
+				// gamma encode the final value
+				gl_FragColor = vec4(pow( outRadiance, vec3(1.0/2.2)), 1.0);
+			}
+		</script>
+
+  <script type="text/x-glsl" id="vertex_texture">
+		varying vec3 vNormal;
+		varying vec3 vPosition;
+		varying vec2 uVv;
+
+		void main() {
+			vec4 vPos = modelViewMatrix * vec4( position, 1.0 );
+			vPosition = vPos.xyz;
+			vNormal = normalMatrix * normal;
 			uVv = uv;
-			gl_Position = projectionMatrix * vec4(pointPosition,1.0);
+			gl_Position = projectionMatrix * vPos;
 		}
 		</script>
 
-  <script type="text/x-glsl" id="fragment_texture_ice">
-			uniform vec3 lightPower;
-			uniform sampler2D specularMap; // surface specular color: equal to F(0)
-			uniform sampler2D glossMap; // material roughness
-			uniform sampler2D diffuseMap; // surface diffuse color
-			uniform float s; // ratio of diffuse lighting
-
-			varying vec3 transformedNormal;
-			varying vec3 pointPosition;
-			varying vec3 lightVector;
+  <script type="text/x-glsl" id="fragment_texture">
+			varying vec3 vNormal;
+			varying vec3 vPosition;
 			varying vec2 uVv;
+			uniform vec3 pointLightPosition; // in world space
+			uniform vec3 clight;
+			uniform sampler2D specularMap;
+			uniform sampler2D diffuseMap;
+			uniform sampler2D roughnessMap;
+			uniform vec2 textureRepeat;
+			const float PI = 3.14159;
 
-			#define PI 3.14159265
+			vec3 cdiff;
+			vec3 cspec;
+			float roughness;
 
-			// compute the geometry term
-			float G(float LdotH)
-			{
-				return 1.0/pow(LdotH,2.0);
+			vec3 FSchlick(float lDoth) {
+				return (cspec + (vec3(1.0)-cspec)*pow(1.0 - lDoth,5.0));
 			}
 
-			// compute Fresnel reflection term with Schlick approximation
-			vec3 F(float LdotH) {
-				vec3 c_spec = texture2D(specularMap,uVv).rgb;
-				return c_spec + (1.0 - c_spec)*pow(1.0-LdotH, 5.0);
+			float DGGX(float nDoth, float alpha) {
+				float alpha2 = alpha*alpha;
+				float d = nDoth*nDoth*(alpha2-1.0)+1.0;
+				return (  alpha2 / (PI*d*d));
 			}
 
-			// compute the normal distribution function, based on Trowbridge-Reitz
-			float D(float NdotH){
-				float alpha = 1.0-texture2D(glossMap,uVv).r;
-				float A = pow(alpha,2.0);
-				float B = PI * pow(pow(NdotH,2.0)*(A-1.0) + 1.0, 2.0);
-				return A/B;
+			float G1(float dotProduct, float k) {
+				return (dotProduct / (dotProduct*(1.0-k) + k) );
 			}
 
-			void main()
-			{
-				vec3  n      		 	= normalize( transformedNormal );
-				vec3  v         		= normalize( -pointPosition );
-				vec3  l         		= normalize(  lightVector );
-				vec3  h          		= normalize( v+l );
-				float  NdotH    		= max(0.000001, dot( n, h ));
-				float  VdotH     		= max(0.000001, dot( v, h ));
-				float  NdotV 			= max(0.000001, dot( n, v ));
-				float  NdotL 			= max(0.000001, dot( n, l ));
-				// specular BRDF
-				vec3 Specular = F(VdotH) * G(VdotH) * D(NdotH) / 4.0;
-				vec3 beta = lightPower / ( 4.0  * PI * pow( length(lightVector),2.0) );
-				vec3 c_diff = texture2D( diffuseMap, uVv).rgb;
-				gl_FragColor = vec4(beta * NdotL * ( s*c_diff + (1.0-s)*Specular), 1.0);
+			float GSmith(float nDotv, float nDotl) {
+					float k = roughness*roughness;
+					return G1(nDotl,k)*G1(nDotv,k);
+			}
+
+			void main() {
+				vec4 lPosition = viewMatrix * vec4( pointLightPosition, 1.0 );
+				vec3 l = normalize(lPosition.xyz - vPosition.xyz);
+				vec3 n = normalize( vNormal );  // interpolation destroys normalization, so we have to normalize
+				vec3 v = normalize( -vPosition);
+				vec3 h = normalize( v + l);
+				// small quantity to prevent divisions by 0
+				float nDotl = max(dot( n, l ),0.000001);
+				float lDoth = max(dot( l, h ),0.000001);
+				float nDoth = max(dot( n, h ),0.000001);
+				float vDoth = max(dot( v, h ),0.000001);
+				float nDotv = max(dot( n, v ),0.000001);
+
+				cdiff = texture2D( diffuseMap, uVv*textureRepeat ).rgb;
+				// texture in sRGB, linearize
+				cdiff = pow( cdiff, vec3(2.2));
+				cspec = texture2D( specularMap, uVv*textureRepeat ).rgb;
+				// texture in sRGB, linearize
+				cspec = pow( cspec, vec3(2.2));
+				roughness = texture2D( roughnessMap, uVv*textureRepeat).r; // no need to linearize roughness map
+
+				vec3 fresnel = FSchlick(lDoth);
+				vec3 BRDF = (vec3(1.0)-fresnel)*cdiff/PI + fresnel*GSmith(nDotv,nDotl)*DGGX(nDoth,roughness*roughness)/
+					(4.0*nDotl*nDotv);
+				vec3 outRadiance = PI* clight * nDotl * BRDF;
+				// gamma encode the final value
+				gl_FragColor = vec4(pow( outRadiance, vec3(1.0/2.2)), 1.0);
 			}
 		</script>
 
   <div class="top-bar">
-    <div class="top-bar-title"></div>
-    <strong>Mjolnir Visualizer</strong>
-    <div>
-      <div class="top-bar-left"></div>
-      <div class="top-bar-right"></div>
-    </div>
+      <div class="top-bar-left">
+          <ul class="menu">
+              <li class="menu-text">Mjolnir Visualizer</li>
+          </ul>
+      </div>
+      <div class="top-bar-right">
+          <ul class="menu">
+              <li><button type="button" class="button alert">Buy Now!</button></li>
+          </ul>
+      </div>
   </div>
 
   <div class="row">
@@ -235,9 +358,9 @@
               <p id="hint">( Default is Metallic Mjolnir )</p>
               <li><a class="button expanded" href='javascript:click_show_base()'>Show Base</a></li>
               <br />
-              <li><a class="button expanded" href='#'>Hide Base</a></li>
+              <li><a class="button expanded" href='javascript:click_hide()'>Hide Base</a></li>
               <br />
-              <li><a class="button expanded" href="#">Hammer Toy</a></li>
+              <li><a class="button expanded" href="javascript:click_show_toy()">Hammer Toy</a></li>
               <br />
               <li><a class="button expanded" href="javascript:click_show_metallic()">Metallic Mjolnir</a></li>
               <br />
@@ -253,32 +376,45 @@
 
       window.addEventListener( 'resize', onWindowResize, false );
 
-    var scene, camera, renderer, controls, stats, loader;
+      var scene, camera, renderer, controls, stats, loader;
 
+      //variabili che mi consentono di rimuovere il precedente modello all'occorrenza
+      var selected_object = null;
+      var mesh_base = null;
+
+      //Variabili per ascoltare il click dei pulsanti
       var click_base = false;
+      var click_hide_base = false;
       var click_metallico = false;
       var click_giocattolo = false;
 
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera( 75, 1024 / 576, 0.1, 1000 );
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera( 75, 1024 / 576, 0.1, 1000 );
 
     //Prendo l'elemento che fungerà da contenitore al mio renderer tramite il suo id
-    var container = document.getElementById("threejs");
+      var container = document.getElementById("threejs");
+      renderer = new THREE.WebGLRenderer( {canvas: threejs} );
 
-    renderer = new THREE.WebGLRenderer( {canvas: threejs} );
     //Adatto le dimensioni del renderer a quelle del canvas usato
-    renderer.setSize( container.width, container.height );
-    renderer.domElement.style.position = 'absolute';
-    renderer.domElement.style.top = '50px';
-      renderer.domElement.style.left = '190px';
-    renderer.setClearColor( 0xbdbdbd );
-    document.body.appendChild( renderer.domElement );
+      renderer.setSize( container.width, container.height );
+
+    //Imposto correttamente la posizione nella finestra del renderer
+      renderer.domElement.style.position = 'absolute';
+      renderer.domElement.style.top = '60px';
+        if(window.innerWidth > 1400){
+            renderer.domElement.style.left = '500px';
+        }else{
+            renderer.domElement.style.left = '200px';
+        }
+      renderer.setClearColor( 0xbdbdbd );
+      document.body.appendChild( renderer.domElement );
 
     //Posizionamento Camera
-    camera.position.set(60, 40, 40);
-    camera.lookAt( new THREE.Vector3(0,0,0));
+      camera.position.set(40, 20, 30);
+      camera.lookAt( new THREE.Vector3(0,0,0));
 
     //Setup shader uniforms
+      //Metallic Version
     var uniformsGold = {
       c_spec:	{ type: "v3", value: new THREE.Vector3() },
       pointLightPosition1:	{ type: "v3", value: new THREE.Vector3() },
@@ -298,96 +434,112 @@
       alpha: {type: "f", value: 0}
     };
 
-
     var vs = document.getElementById("vertex").textContent;
     var fs = document.getElementById("fragment").textContent;
 
+    var vsc = document.getElementById("vertex_combined").textContent;
+	var fsc = document.getElementById("fragment_combined").textContent;
+
+      //Metallic Materials
     var gold_material = new THREE.ShaderMaterial({ uniforms: uniformsGold, vertexShader: vs, fragmentShader: fs });
     var silver_material = new THREE.ShaderMaterial({ uniforms: uniformsSilver, vertexShader: vs, fragmentShader: fs});
 
-    // Texture info setup
-    var diffuseMap = THREE.ImageUtils.loadTexture( "media/Ice_Diffuse.png" );
-    var specularMap = THREE.ImageUtils.loadTexture( "media/Ice_Specular.png" );
-    var glossMap = THREE.ImageUtils.loadTexture( "media/Ice_Glossiness.png" );
+      //Texture data
+      var diffuseMap = THREE.ImageUtils.loadTexture( "media/Wood_StaggeredFloorPlanks_Diffuse.png" );
+      var specularMap = THREE.ImageUtils.loadTexture( "media/Wood_StaggeredFloorPlanks_Specular.png" );
+      var roughnessMap = THREE.ImageUtils.loadTexture( "media/Wood_StaggeredFloorPlanks_Roughness.png" );
 
-    diffuseMap.minFilter = THREE.LinearMipMapLinearFilter; diffuseMap.anisotropy = renderer.getMaxAnisotropy();
-    specularMap.minFilter = THREE.LinearMipMapLinearFilter; specularMap.anisotropy = renderer.getMaxAnisotropy();
-    glossMap.minFilter = THREE.LinearMipMapLinearFilter; glossMap.anisotropy = renderer.getMaxAnisotropy();
+      var uniforms_texture = {
+          specularMap: { type: "t", value: specularMap},
+          diffuseMap:	{ type: "t", value: diffuseMap},
+          roughnessMap:	{ type: "t", value: roughnessMap},
+          pointLightPosition:	{ type: "v3", value: new THREE.Vector3() },
+          clight:	{ type: "v3", value: new THREE.Vector3() },
+          textureRepeat: { type: "v2", value: new THREE.Vector2(1,1) }
+      };
 
-    var uniforms_texture = {
-      specularMap: { type: "t", value: specularMap},
-      diffuseMap:	{ type: "t", value: diffuseMap},
-      glossMap:	{ type: "t", value: glossMap},
-      pointLightPosition:	{ type: "v3", value: new THREE.Vector3() },
-      lightPower:	{ type: "v3", value: new THREE.Vector3() },
-      alpha: {type: "f", value: 0},
-      s: {type: "f", value: 0},
-    };
+      var vs_t = document.getElementById("vertex_texture").textContent;
+      var fs_t = document.getElementById("fragment_texture").textContent;
 
-    var vs_t = document.getElementById("vertex_texture_ice").textContent;
-    var fs_t = document.getElementById("fragment_texture_ice").textContent;
+      var texture_material = new THREE.ShaderMaterial({ uniforms: uniforms_texture, vertexShader: vs_t, fragmentShader: fs_t });
 
-    var texture_material = new THREE.ShaderMaterial({ uniforms: uniforms_texture, vertexShader: vs_t, fragmentShader: fs_t });
-
+      //On start default visualization
     Metallic_Hammer();
 
     //Geometria e Materiale per le luci
     geometryLight = new THREE.SphereGeometry( 0.05, 0.05, 0.05);
     materialLight = new THREE.MeshBasicMaterial ({color: 0xffffff, wireframe:true});
+
     //Setup luci scena su ogni materiale
     //Prima Luce
     lightA = new THREE.Mesh( geometryLight, materialLight);
-    lightA.position.set( 10.0, 4.0, 10.0 );
+    lightA.position.set( 0.0, 1.0, 13.0 );
     scene.add( lightA );
+
     uniformsGold.pointLightPosition1.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
     uniformsSilver.pointLightPosition1.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
-    //Seconda Luce
+
+      //Seconda Luce
     lightB = new THREE.Mesh( geometryLight, materialLight);
-    lightB.position.set( 0, 30.0, 0.0 );
+    lightB.position.set( 0, 15.0, 0.0 );
     scene.add( lightB );
+
     uniformsGold.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
     uniformsSilver.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
-    //Terza Luce
+
+      //Terza Luce
     lightC = new THREE.Mesh( geometryLight, materialLight);
-    lightC.position.set( -10.0, 4.0, 10.0 );
+    lightC.position.set( 0.0, 1.0, -13.0 );
     scene.add( lightC );
+
     uniformsGold.pointLightPosition3.value = new THREE.Vector3(lightC.position.x, lightC.position.y, lightC.position.z);
-    uniformsSilver.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
-    //Quarta Luce
+    uniformsSilver.pointLightPosition3.value = new THREE.Vector3(lightC.position.x, lightC.position.y, lightC.position.z);
+
+      //Quarta Luce
     lightD = new THREE.Mesh( geometryLight, materialLight);
-    lightD.position.set( 10.0, 4.0, -10.0 );
+    lightD.position.set( -18.0, 1.0, 0.0 );
     scene.add( lightD );
+
     uniformsGold.pointLightPosition4.value = new THREE.Vector3(lightD.position.x, lightD.position.y, lightD.position.z);
-    uniformsSilver.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
-    //Setup uniforms
+    uniformsSilver.pointLightPosition4.value = new THREE.Vector3(lightD.position.x, lightD.position.y, lightD.position.z);
+
+      //Setup uniforms
     uniformsGold.c_spec.value = new THREE.Vector3( 1.0, 0.79, 0.29 );
-    uniformsGold.lightPower.value = new THREE.Vector3( 9000.0, 9000.0, 9000.0 );
-    uniformsGold.alpha.value = 0.5;
+    uniformsGold.lightPower.value = new THREE.Vector3( 8000.0, 8000.0, 8000.0 );
+    uniformsGold.alpha.value = 0.4;
 
     uniformsSilver.c_spec.value = new THREE.Vector3( 0.8, 0.8, 0.8 );
-    uniformsSilver.lightPower.value = new THREE.Vector3( 9000.0, 9000.0, 9000.0 );
-    uniformsSilver.alpha.value = 0.5;
+    uniformsSilver.lightPower.value = new THREE.Vector3( 6000.0, 6000.0, 6000.0 );
+    uniformsSilver.alpha.value = 0.4;
 
-    //Texture uniforms data
-    uniforms_texture.pointLightPosition.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
-    uniforms_texture.lightPower.value = new THREE.Vector3( 9000.0, 9000.0, 9000.0 );
-    uniforms_texture.alpha.value = 0.9;
-    uniforms_texture.s.value = 0.3;
+      uniforms_texture.pointLightPosition.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
+      uniforms_texture.clight.value = new THREE.Vector3(1.0, 1.0, 1.0);
+      uniforms_texture.textureRepeat.value = new THREE.Vector2( 1.0, 1.0);
+      uniforms_texture.diffuseMap.value = diffuseMap;
+      uniforms_texture.specularMap.value = specularMap;
+      uniforms_texture.roughnessMap.value = roughnessMap;
 
-
+    //Setup the stats
     stats = new Stats();
     stats.domElement.style.position = 'relative';
     stats.domElement.style.top = '0px';
     document.body.appendChild( stats.domElement );
 
-    controls = new THREE.OrbitControls( camera );
-    controls.addEventListener( 'change', Render );
-    //Limito la distanza a cui posso andare dall'oggetto per evitare attraversamenti
-    controls.minDistance = 18;
-    controls.maxDistance = 100;
-      //limito l'angolo di rotazione così da non poter andare sotto al materiale;
-    controls.minPolarAngle = 0;
-    controls.maxPolarAngle = Math.PI/2;
+      SetupOrbitControls();
+
+
+      function SetupOrbitControls() {
+          controls = new THREE.OrbitControls( camera );
+          controls.addEventListener( 'change', Render );
+          //Limito la distanza a cui posso andare dall'oggetto per evitare attraversamenti
+          controls.minDistance = 18;
+          controls.maxDistance = 100;
+          //limito l'angolo di rotazione così da non poter andare sotto al materiale;
+          controls.minPolarAngle = 0;
+          controls.maxPolarAngle = Math.PI/2;
+
+          controls.enablePan = false;
+      }
 
     function Update() {
       requestAnimationFrame( Update );
@@ -397,9 +549,17 @@
             //lo setto di nuovo a false per evitare l'aggiunta ad ogni frame
             click_base = false;
         }
+        if(click_hide_base){
+            hideBase();
+            click_hide_base = false;
+        }
         if(click_metallico){
             Metallic_Hammer();
             click_metallico = false;
+        }
+        if(click_giocattolo){
+            SetupToyHammer();
+            click_giocattolo = false;
         }
 
       controls.update();
@@ -413,11 +573,19 @@
 
     //Funzione per caricare la base su cui posa il martello
     function showBase(scena, texture) {
-      //Posiziono la base che verrà visualizzata la maggior parte del tempo
-      var geom = new THREE.CylinderGeometry( 25, 25, 0.05, 32 );
-      var mesh = new THREE.Mesh( geom, texture );
-      mesh.position.y = -9;
-      scena.add( mesh );
+        if(mesh_base == null){
+            //Posiziono la base che verrà visualizzata la maggior parte del tempo
+            var geom = new THREE.CylinderGeometry( 30, 30, 0.05, 32 );
+            mesh_base = new THREE.Mesh( geom, texture );
+            mesh_base.position.y = -9;
+            scena.add( mesh_base );
+        }
+    }
+    function hideBase() {
+        if(mesh_base != null){
+            scene.remove(mesh_base);
+            mesh_base = null;
+        }
     }
 
       function onWindowResize(){
@@ -435,41 +603,223 @@
           click_base = true;
       }
 
+      //Funzione che ascolta il click del pulsante Hide Base
+      function click_hide() {
+          click_hide_base = true;
+      }
+
       //Funzione che ascolta il click sul pulsante metallic mjolnir
       function click_show_metallic() {
           click_metallico = true;
       }
 
+      //Funzione per l'ascolto del pulsante toy
+      function click_show_toy() {
+          click_giocattolo = true;
+      }
+
       //Funzione per visualizzare la versione metallica del martello
       function Metallic_Hammer() {
+            //Se sto visualizzando un martello allora lo elimino e inserisco quello nuovo;
+          if(selected_object != null){
+              scene.remove(selected_object);
+          }
+
           var childCounter = 0;
           var loader = new THREE.OBJLoader();
           loader.load( 'models/hammer.obj', function ( object ) {
-              object.traverse( function ( child ) {
-                  if ( child instanceof THREE.Mesh ) {
-                      if(childCounter == 0) {
-                          child.material = silver_material;
-                      }
-                      else if(childCounter == 1) {
-                          child.material = silver_material;
-                      }
-                      else if(childCounter == 2) {
-                          child.material = silver_material;
-                      }
-                      else{
-                          child.material = gold_material;
-                      }
-                      child.geometry.computeVertexNormals();
-                      childCounter++;
-                  }
+                object.traverse( function ( child ) {
+                if ( child instanceof THREE.Mesh ) {
+                   if(childCounter == 0) {
+                         child.material = silver_material;
+                   }
+                   else if(childCounter == 1) {
+                         child.material = silver_material;
+                   }
+                   else if(childCounter == 2) {
+                         child.material = silver_material;
+                   }
+                   else if(childCounter == 14){
+                       child.material = silver_material;
+                   }
+                   else if(childCounter == 16){
+                       child.material = silver_material;
+                   }
+                   else{
+                         child.material = gold_material;
+                   }
+                   child.geometry.computeVertexNormals();
+                   childCounter++;
+                }
               } );
               scene.add(object);
               //Ridimensiono e ruoto
               object.scale.set(0.2, 0.2, 0.2);
               object.rotation.z = -(45 * Math.PI/180);
+              selected_object = object;
           } );
       }
 
+      function SetupToyHammer(){
+
+          if(selected_object != null){
+              scene.remove(selected_object);
+          }
+          //Gomma rossa
+          var first_materialParameters = {
+				cdiff_red: 0.6,
+				cdiff_green: 0.0,
+				cdiff_blue: 0.0,
+				cspec_red: 0.04,
+				cspec_green: 0.04,
+				cspec_blue: 0.04,
+				roughness: 0.3
+			}
+
+            var second_materialParameters = {
+				cdiff_red: 0.23,
+				cdiff_green: 0.02,
+				cdiff_blue: 0.0,
+				cspec_red: 0.04,
+				cspec_green: 0.04,
+				cspec_blue: 0.04,
+				roughness: 0.3
+			}
+
+            var decorationParameters = {
+				cdiff_red: 0.0,
+				cdiff_green: 0.0,
+				cdiff_blue: 0.7,
+				cspec_red: 0.04,
+				cspec_green: 0.04,
+				cspec_blue: 0.04,
+				roughness: 0.4
+			}
+
+			var uniformsToy = {
+						cspec:	{ type: "v3", value: new THREE.Vector3() },
+						cdiff:	{ type: "v3", value: new THREE.Vector3() },
+						roughness: {type: "f", value: 0.5},
+						pointLightPosition:	{ type: "v3", value: new THREE.Vector3() },
+                        pointLightPosition2:	{ type: "v3", value: new THREE.Vector3() },
+                        pointLightPosition3:	{ type: "v3", value: new THREE.Vector3() },
+                        pointLightPosition4:	{ type: "v3", value: new THREE.Vector3() },
+						clight:	{ type: "v3", value: new THREE.Vector3() },
+					};
+
+            var uniformsToy2 = {
+						cspec:	{ type: "v3", value: new THREE.Vector3() },
+						cdiff:	{ type: "v3", value: new THREE.Vector3() },
+						roughness: {type: "f", value: 0.5},
+						pointLightPosition:	{ type: "v3", value: new THREE.Vector3() },
+                        pointLightPosition2:	{ type: "v3", value: new THREE.Vector3() },
+                        pointLightPosition3:	{ type: "v3", value: new THREE.Vector3() },
+                        pointLightPosition4:	{ type: "v3", value: new THREE.Vector3() },
+						clight:	{ type: "v3", value: new THREE.Vector3() },
+					};
+
+            var uniformsDecoration = {
+						cspec:	{ type: "v3", value: new THREE.Vector3() },
+						cdiff:	{ type: "v3", value: new THREE.Vector3() },
+						roughness: {type: "f", value: 0.5},
+						pointLightPosition:	{ type: "v3", value: new THREE.Vector3() },
+                        pointLightPosition2:	{ type: "v3", value: new THREE.Vector3() },
+                        pointLightPosition3:	{ type: "v3", value: new THREE.Vector3() },
+                        pointLightPosition4:	{ type: "v3", value: new THREE.Vector3() },
+						clight:	{ type: "v3", value: new THREE.Vector3() },
+					};
+
+            RubberMaterial = new THREE.ShaderMaterial({ uniforms: uniformsToy, vertexShader: vsc, fragmentShader: fsc });
+            SecondToyMaterial = new THREE.ShaderMaterial({ uniforms: uniformsToy2, vertexShader: vsc, fragmentShader: fsc });
+            DecorationMaterial = new THREE.ShaderMaterial({ uniforms: uniformsDecoration, vertexShader: vsc, fragmentShader: fsc });
+
+             var childCounter = 0;
+                var loader = new THREE.OBJLoader();
+                loader.load( 'models/hammer.obj', function ( object ) {
+                        object.traverse( function ( child ) {
+                        if ( child instanceof THREE.Mesh ) {
+                        if(childCounter == 0) {
+                                child.material = RubberMaterial;
+                        }
+                        else if(childCounter == 1) {
+                                child.material = RubberMaterial;
+                        }
+                        else if(childCounter == 2) {
+                                child.material = DecorationMaterial;
+                        } else if(childCounter == 14){
+                                child.material = DecorationMaterial;
+                        }
+                        else if(childCounter == 16){
+                                child.material = DecorationMaterial;
+                        }
+                        else if(childCounter == 17){
+                                child.material = DecorationMaterial;
+                        }
+                        else if(childCounter == 18){
+                                child.material = DecorationMaterial;
+                        }
+                        else if(childCounter == 19){
+                                child.material = DecorationMaterial;
+                        }
+                        else if(childCounter == 20){
+                                child.material = DecorationMaterial;
+                        }
+                        else if(childCounter == 21){
+                                child.material = DecorationMaterial;
+                        }
+                        else if(childCounter == 22){
+                                child.material = DecorationMaterial;
+                        }
+                        else if(childCounter == 23){
+                                child.material = DecorationMaterial;
+                        }
+                        else if(childCounter == 24){
+                                child.material = DecorationMaterial;
+                        }
+                        else{
+                                child.material = SecondToyMaterial;
+                        }
+                        child.geometry.computeVertexNormals();
+                        childCounter++;
+                        }
+                    } );
+                    scene.add(object);
+                    //Ridimensiono e ruoto
+                    object.scale.set(0.2, 0.2, 0.2);
+                    object.rotation.z = -(45 * Math.PI/180);
+                    selected_object = object;
+                } );
+
+        uniformsToy.pointLightPosition.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
+        uniformsToy.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
+        uniformsToy.pointLightPosition3.value = new THREE.Vector3(lightC.position.x, lightC.position.y, lightC.position.z);
+        uniformsToy.pointLightPosition4.value = new THREE.Vector3(lightD.position.x, lightD.position.y, lightD.position.z);
+
+        uniformsToy.cspec.value = new THREE.Vector3(first_materialParameters.cspec_red, first_materialParameters.cspec_green, first_materialParameters.cspec_blue);
+        uniformsToy.cdiff.value = new THREE.Vector3(first_materialParameters.cdiff_red, first_materialParameters.cdiff_green, first_materialParameters.cdiff_blue);
+        uniformsToy.roughness.value = first_materialParameters.roughness>0.0?first_materialParameters.roughness:0.01;
+        uniformsToy.clight.value = new THREE.Vector3(1.0, 1.0, 1.0);
+
+        uniformsToy2.pointLightPosition.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
+        uniformsToy2.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
+        uniformsToy2.pointLightPosition3.value = new THREE.Vector3(lightC.position.x, lightC.position.y, lightC.position.z);
+        uniformsToy2.pointLightPosition4.value = new THREE.Vector3(lightD.position.x, lightD.position.y, lightD.position.z);
+
+        uniformsToy2.cspec.value = new THREE.Vector3(second_materialParameters.cspec_red, second_materialParameters.cspec_green, second_materialParameters.cspec_blue);
+        uniformsToy2.cdiff.value = new THREE.Vector3(second_materialParameters.cdiff_red, second_materialParameters.cdiff_green, second_materialParameters.cdiff_blue);
+        uniformsToy2.roughness.value = second_materialParameters.roughness>0.0?second_materialParameters.roughness:0.01;
+        uniformsToy2.clight.value = new THREE.Vector3(1.0, 1.0, 1.0);
+
+        uniformsDecoration.pointLightPosition.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
+        uniformsDecoration.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
+        uniformsDecoration.pointLightPosition3.value = new THREE.Vector3(lightC.position.x, lightC.position.y, lightC.position.z);
+        uniformsDecoration.pointLightPosition4.value = new THREE.Vector3(lightD.position.x, lightD.position.y, lightD.position.z);
+
+        uniformsDecoration.cspec.value = new THREE.Vector3(decorationParameters.cspec_red, decorationParameters.cspec_green, decorationParameters.cspec_blue);
+        uniformsDecoration.cdiff.value = new THREE.Vector3(decorationParameters.cdiff_red, decorationParameters.cdiff_green, decorationParameters.cdiff_blue);
+        uniformsDecoration.roughness.value = decorationParameters.roughness>0.0?decorationParameters.roughness:0.01;
+        uniformsDecoration.clight.value = new THREE.Vector3(1.0, 1.0, 1.0);
+      }
 
       Update();
 
