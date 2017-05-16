@@ -338,6 +338,29 @@
 			}
 		</script>
 
+          <script type="text/x-glsl" id="vertex_refraction">
+                varying vec3 vReflect;
+
+                void main()
+                {
+                    vec4 worldPosition = modelMatrix * vec4(position,1.0);
+                    vec4 worldNormal = modelMatrix * vec4(normal,0.0);
+                    vec3 cameraToVertex = normalize( worldPosition.xyz - cameraPosition );
+                    vReflect = refract( normalize( worldPosition.xyz - cameraPosition ), normalize( worldNormal.xyz ), 1.0/2.0 );
+                    gl_Position = projectionMatrix * viewMatrix * worldPosition;
+                }
+          </script>
+
+          <script type="text/x-glsl" id="fragment_refraction">
+                varying vec3 vReflect;
+                uniform samplerCube tReflection;
+
+                void main()
+                {
+                    gl_FragColor = textureCube( tReflection,vReflect);
+                }
+		</script>
+
   <div class="top-bar">
       <div class="top-bar-left">
           <ul class="menu">
@@ -364,7 +387,7 @@
               <br />
               <li><a class="button expanded" href="javascript:click_show_metallic()">Metallic Mjolnir</a></li>
               <br />
-              <li><a class="button expanded" href="#">Show Enviroment</a></li>
+              <li><a class="button expanded" href="javascript:click_show_enviroment()">Show Enviroment</a></li>
           </ul>
       </div>
       <div class="large-10 medium-10 small-10 columns ">
@@ -387,6 +410,7 @@
       var click_hide_base = false;
       var click_metallico = false;
       var click_giocattolo = false;
+      var click_enviroment = false;
 
       scene = new THREE.Scene();
       camera = new THREE.PerspectiveCamera( 75, 1024 / 576, 0.1, 1000 );
@@ -400,13 +424,13 @@
 
     //Imposto correttamente la posizione nella finestra del renderer
       renderer.domElement.style.position = 'absolute';
-      renderer.domElement.style.top = '60px';
-        if(window.innerWidth > 1400){
+      renderer.domElement.style.top = '80px';
+        if(window.innerWidth > 1600){
             renderer.domElement.style.left = '500px';
         }else{
             renderer.domElement.style.left = '200px';
         }
-      renderer.setClearColor( 0xbdbdbd );
+      renderer.setClearColor( 0xf1f3f4 );
       document.body.appendChild( renderer.domElement );
 
     //Posizionamento Camera
@@ -561,6 +585,10 @@
             SetupToyHammer();
             click_giocattolo = false;
         }
+        if(click_enviroment){
+            ShowEnviroment();
+            click_enviroment = false;
+        }
 
       controls.update();
       stats.update();
@@ -573,11 +601,13 @@
 
     //Funzione per caricare la base su cui posa il martello
     function showBase(scena, texture) {
+        scene.background = new THREE.Color( 0xf1f3f4 );
         if(mesh_base == null){
             //Posiziono la base che verrà visualizzata la maggior parte del tempo
-            var geom = new THREE.CylinderGeometry( 30, 30, 0.05, 32 );
+            var geom = new THREE.CylinderGeometry( 50, 50, 0.05, 32 );
             mesh_base = new THREE.Mesh( geom, texture );
             mesh_base.position.y = -9;
+            mesh_base.position.x = 4;
             scena.add( mesh_base );
         }
     }
@@ -618,12 +648,17 @@
           click_giocattolo = true;
       }
 
+      function click_show_enviroment(){
+          click_enviroment = true;
+      }
+
       //Funzione per visualizzare la versione metallica del martello
       function Metallic_Hammer() {
             //Se sto visualizzando un martello allora lo elimino e inserisco quello nuovo;
           if(selected_object != null){
               scene.remove(selected_object);
           }
+          scene.background = new THREE.Color( 0xf1f3f4 );
 
           var childCounter = 0;
           var loader = new THREE.OBJLoader();
@@ -665,6 +700,9 @@
           if(selected_object != null){
               scene.remove(selected_object);
           }
+
+          scene.background = new THREE.Color( 0xf1f3f4 );
+
           //Gomma rossa
           var first_materialParameters = {
 				cdiff_red: 0.6,
@@ -738,49 +776,49 @@
                 loader.load( 'models/hammer.obj', function ( object ) {
                         object.traverse( function ( child ) {
                         if ( child instanceof THREE.Mesh ) {
-                        if(childCounter == 0) {
-                                child.material = RubberMaterial;
-                        }
-                        else if(childCounter == 1) {
-                                child.material = RubberMaterial;
-                        }
-                        else if(childCounter == 2) {
-                                child.material = DecorationMaterial;
-                        } else if(childCounter == 14){
-                                child.material = DecorationMaterial;
-                        }
-                        else if(childCounter == 16){
-                                child.material = DecorationMaterial;
-                        }
-                        else if(childCounter == 17){
-                                child.material = DecorationMaterial;
-                        }
-                        else if(childCounter == 18){
-                                child.material = DecorationMaterial;
-                        }
-                        else if(childCounter == 19){
-                                child.material = DecorationMaterial;
-                        }
-                        else if(childCounter == 20){
-                                child.material = DecorationMaterial;
-                        }
-                        else if(childCounter == 21){
-                                child.material = DecorationMaterial;
-                        }
-                        else if(childCounter == 22){
-                                child.material = DecorationMaterial;
-                        }
-                        else if(childCounter == 23){
-                                child.material = DecorationMaterial;
-                        }
-                        else if(childCounter == 24){
-                                child.material = DecorationMaterial;
-                        }
-                        else{
-                                child.material = SecondToyMaterial;
-                        }
-                        child.geometry.computeVertexNormals();
-                        childCounter++;
+                            if(childCounter == 0) {
+                                    child.material = RubberMaterial;
+                            }
+                            else if(childCounter == 1) {
+                                    child.material = RubberMaterial;
+                            }
+                            else if(childCounter == 2) {
+                                    child.material = DecorationMaterial;
+                            } else if(childCounter == 14){
+                                    child.material = DecorationMaterial;
+                            }
+                            else if(childCounter == 16){
+                                    child.material = DecorationMaterial;
+                            }
+                            else if(childCounter == 17){
+                                    child.material = DecorationMaterial;
+                            }
+                            else if(childCounter == 18){
+                                    child.material = DecorationMaterial;
+                            }
+                            else if(childCounter == 19){
+                                    child.material = DecorationMaterial;
+                            }
+                            else if(childCounter == 20){
+                                    child.material = DecorationMaterial;
+                            }
+                            else if(childCounter == 21){
+                                    child.material = DecorationMaterial;
+                            }
+                            else if(childCounter == 22){
+                                    child.material = DecorationMaterial;
+                            }
+                            else if(childCounter == 23){
+                                    child.material = DecorationMaterial;
+                            }
+                            else if(childCounter == 24){
+                                    child.material = DecorationMaterial;
+                            }
+                            else{
+                                    child.material = SecondToyMaterial;
+                            }
+                            child.geometry.computeVertexNormals();
+                            childCounter++;
                         }
                     } );
                     scene.add(object);
@@ -819,6 +857,48 @@
         uniformsDecoration.cdiff.value = new THREE.Vector3(decorationParameters.cdiff_red, decorationParameters.cdiff_green, decorationParameters.cdiff_blue);
         uniformsDecoration.roughness.value = decorationParameters.roughness>0.0?decorationParameters.roughness:0.01;
         uniformsDecoration.clight.value = new THREE.Vector3(1.0, 1.0, 1.0);
+      }
+      
+      function ShowEnviroment() {
+
+          if(selected_object != null){
+              scene.remove(selected_object);
+          }
+
+          hideBase();
+
+          var loader = new THREE.CubeTextureLoader();
+          loader.setPath( 'media/' );
+
+          var textureCube = loader.load( [
+              'posx.jpg', 'negx.jpg',
+              'posy.jpg', 'negy.jpg',
+              'posz.jpg', 'negz.jpg'
+          ] );
+
+          scene.background = textureCube;
+
+          var uniforms_ref = { tReflection: { type: "t", value: textureCube } };
+
+          var vs_r = document.getElementById("vertex_refraction").textContent;
+          var fs_r = document.getElementById("fragment_refraction").textContent;
+
+          var material_r = new THREE.ShaderMaterial({ uniforms: uniforms_ref, vertexShader: vs_r, fragmentShader: fs_r });
+
+            var loader = new THREE.OBJLoader();
+            loader.load( 'models/hammer.obj', function ( object ) {
+                object.traverse( function ( child ) {
+                    if ( child instanceof THREE.Mesh ) {
+                        child.material = material_r;
+                        child.geometry.computeVertexNormals();
+                    }
+                } );
+                scene.add(object);
+                //Ridimensiono e ruoto
+                object.scale.set(0.2, 0.2, 0.2);
+                object.rotation.z = -(45 * Math.PI/180);
+                selected_object = object;
+            } );
       }
 
       Update();
