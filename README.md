@@ -114,6 +114,18 @@ Infine la versione che prevede la rifrazione della luce sfrutterà ovviamente un
 ![Cubemap Usata](media/screenshots/cube_map.png)
 
 ## Materiali
+I materiali metallici sono stati creati attraverso l'uso di uno Shader nella sua versione Microfacet, poichè tale versione consentiva risultati visivamente perfetti e con colori più vivi rispetto all'uso di un combined shader (cdiff + cspec). I colori vivi rendono bene l'idea di un martello appartenente ad una divinità e quindi senza alcun segno di usura data dal tempo e dall'utilizzo. Si è deciso in questo caso di usare due materiali distinti, uno dorato usato per gli intarsi del manico e le decorazioni della testa ed infine uno argentato che verrà applicato alla testa stessa ed al manico, componendo la struttura di base del martello. Le 4 luci puntuali integrate negli shader consentono, con questo tipo di materiale, un risultato visivamente pieno, in quanto 3 facce su 4 sono illuminate, consentendo di vedere il riflesso delle luci quasi da ogni angolazione e mantenendo in ombra alcuni elementi.
+
+![Versione Metallica](media/screenshots/metallic_mj.png)
+
+I materiali plastici invece sono stati creati ovviamente attraverso un combined shader integrando le informazioni inerenti a cdiff e cspec. Anche tali shader sono stati adottati nella versione vista a lezione ed integrati con le luci aggiuntive previste. I materiali usati in questo caso sono 3, tutti plastici e a far la differenza sono solamente i colori: rosso per la testa del martello, blu per il manico ed i glifi presenti sulla testa ed infine un materiale marrone per gli intarsi del manico. 
+
+![Versione Giocattolo](media/screenshots/toy_mj.png)
+
+Infine la versione degli shader che implementa il fenomeno di rifrazione è stata creata partendo dallo shader visto a lezione che consente il reflection mapping e modificando il codice adeguatamente usando la funzione refract. Il rapporto dell'indice di rifrazione (1.0/2.0) è stato scelto dopo alcuni test poichè consentiva un risultato visivamente appagante. 
+
+![Rifrazione](media/screenshots/refract_mj.png)
+
 
 ## Struttura del codice
 
