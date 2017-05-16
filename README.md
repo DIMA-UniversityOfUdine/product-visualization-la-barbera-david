@@ -1,90 +1,3 @@
-# ProductVisualization
-
-![Image from Ford Configurator, developed in three.js](images/ford-configurator.jpg)
-
-READ CAREFULLY this document BEFORE you start!
-
-## Prerequisites
-
-- read carefully all slides and notes up to lecture 15 before you start. Try the proposed exercises. As you progress in the project, read also lectures up to 18 (post processing).
-
-## Hints
-
-- Try to work out a basic project which satisfies all requirements well before the deadline and as soon as possible: you will then use the remaining time to refine, improve and polish.
-- If you are stuck for too much time on a problem, ask for help, preferably in the forum.
-- the process is as important as the result. Use this project to learn a workflow, and how to use tools effectively. Experiment, and try to come up with efficient, elegant, and well commented code.
-- commit often in your git repository and with meaningful comments.
-- do not choose too complex products with many materials. 2-4 materials are enough.
-
-
-## Goals
-
-The well-known ACME company has asked you to build a product **Web visualizer / configurator** for its new e-commerce site. Before giving you the job, ACME wants to evaluate how faithfully you can visualize and configure products.  ACME sells everything, so you can choose whatever kind of product you want for the demonstration.
-
-Your goal is to build a Web application (a HTML page) that:
-
-- visualizes a product in 3D using three.js, using PBR equations and materials;
-- allows the user to inspect the product (e.g. by orbiting the camera around it), and change some material on it by choosing from a few alternatives.
-
-Try to make it look like a simple, but real portion of an e-commerce site, not a three.js example: choose carefully colors, fonts, images, and icons, also taking inspiration from real web sites.
-
-## Steps (read CAREFULLY)
-
-3. Prepare, and add to the repository, a journal.md file for logging your progress and choices.
-
-1. Choose a product for which: (i) you can easily build a 3D model, or (ii) you can download a 3D model which you have the right to use in non-commercial applications. The model should not be too complex (not more than 50k vertices) and in some format that three.js can read. [Three.js examples](https://threejs.org/examples/) provide a list of loaders for different formats: beware that not all of them work perfectly, and you might have to try with different formats.
-
-2. Design the lighting for the product. Products in web sites and catalogues are photographed using strategically placed lights that enhance details and shape. For example, [searching google images for product photography lighting](http://www.google.com/images?q=product+photography+lighting) will show you a number of real-world lighting setups that are used for products. In your lighting setup, you can use whatever you want, from punctual lights, to environment lighting, or light maps, or any combination of them.
-
-3. Design the PBR materials for the product. You can use PRB textures found anywhere, or produce them, e.g. with Substance Designer or B2M. If you use textures authored by someone else, just make sure you have the rights for using them in our context (non-commercial application). At least one of the materials must have 2-3 alternatives (e.g. different colors, or materials).
-
-4. Build the application that renders the chosen 3D model, with the designed lighting setup and materials, and an user interface for selecting the material between the alternatives. **Important: you can implement this step in two different ways**:
-
-    a. using three.js built-in lights and materials (MeshStandardMaterial or MeshPhysicalMaterial), without writing any shader. In this case, your final report **must include** the equations of the BRDF and rendering equations that you are using. In other words, you have to dig into three.js shaders to find which equations are used, and write them (in mathematical form, not using code);
-
-    b. using shaders written by you, e.g. by extending the shaders we saw in the classroom. In this case, your report needs just to mention the kind of BRDF / lights you have implemented (no need to report the equations, unless you are using different BRDF or adding some new equation).
-
-4. If possible, try to take into account implicit requirements as well. For example, you cannot use textures with file sizes of dozens of megabytes for a Web site; and also, your page should render at least at 30 fps on average smartphones. You will get bonus points for a result that could be deployed to a Web site with few or no modifications.
-
-5. Write a concise report by overwriting this file.
-
-## Starting code
-
-There is no specific starting code for this project. If you choose to use your own shaders, choose from our examples the one that uses the lighting techniques you want to use, or combine from more examples for a specific set of techniques. If you want to use
-three.js provided materials and lights, you can start from some three.js built-in example.
-
-## Documenting and report
-
-For project documentation and reporting, we use the [markdown format](https://daringfireball.net/projects/markdown/syntax), which is also the format of this document. Markdown is a lightweight markup language with plain text formatting syntax which is easy and quick to write, very human-readable, and that can be converted to HTML.
-
-If you need more features than the ones that markdown provides (e.g. writing equations), you can use one of its extensions called [markdeep](https://casual-effects.com/markdeep/).
-
-You are required to document your project in two ways:
-
-- maintain a journal (in a file called journal.md) describing key design decisions, changes, bug symptoms and solutions, including screenshots.
-- create a report (by overwriting this file).
-
-The report should be as brief as possible while covering the following points:
-
-- overall description: what your project is about and the files it uses.
-- results, including images of the scenes created, taken in a way that clearly illustrates that they satisfy the specification.
-- brief explanation of the process that you used to make your scene. Include tools, assets, and planning steps.
-
-## Constraints
-
-If you use textures / 3D models / substances / ..., make sure that you have the rights to include them. For example, search for images that come with a [CC Attribution, ShareAlike or NonCommercial licences](https://creativecommons.org/share-your-work/licensing-types-examples/).
-
-In this project, you are allowed to re-use assets taken elsewhere, but **entirely copying** others' work, even with slight modifications, is forbidden and will have serious consequences beyond the deletion of your project. In any case, mention any source of inspiration in your journal and final report.
-
-## Follow-up
-
-You are welcome to extend your project after the deadline, in any way your think is interesting. For example, you could add javascript libraries that analyze music and derive values in real-time that can be fed to three.js for animation purposes, or you could extend your terrain generation software such that hidden cube faces are not created in three.js. If you do that before the final exam, you might get bonus points for this kind of activies - just let me know any progress you make.
-
-## Credits
-
-The image above comes from a [Ford car configurator built in three.js](http://www.ford.com/cars/mustang/customizer/#!/customize).
-
-
 # Introduzione
 
 Per il seguente progetto si è cercato di perseguire l'idea di sviluppare una sezione di un sito che consente di visualizzare in 3D un prodotto da acquistare in modo da sviluppare correttamente non solamente la parte dedicata al rendering 3d, ma in generale tutta la struttura della pagina. Per fare ciò ci si è avvalsi del Framework Front-End [Fundation](http://foundation.zurb.com/), che consente di sviluppare in modo facile e Standardizzato strutture HTML, CSS e Javascript.
@@ -126,8 +39,22 @@ Infine la versione degli shader che implementa il fenomeno di rifrazione è stat
 
 ![Rifrazione](media/screenshots/refract_mj.png)
 
+Per quanto riguarda infine la base d'appoggio, essa è stata creata usando un cilindro con una altezza estremamente ridotta ed applicandovi una texture tramite shader. Tale texture è il prodotto delle informazioni di una Specular Map, una Diffuse Map ed una Roughness Map che, combinate, garantiscono un risultato visivamente soddisfacente. Tali texture sono state ottenute gratuitamente dal sito web [GameTextures] (https://www.gametextures.com/free-materials/) e poi create ed esportate singolarmente attraverso il software Substance Player. Quelle usate sono visibili in figura. 
+
+![Base Textures](media/screenshots/textures.png)
 
 ## Struttura del codice
+
+Avendo previsto 3 scene totalmente diverse ed usato degli elementi di UI esterni, si è rivelato necessario utilizzare dei pattern di programmazione particolari. Al click di un pulsante che attiva la visualizzazione di un particolare elemento della scena viene avviato un metodo che setta a true una apposita variabile Booleana. Questa modifica verrà vista grazie ad un if durante il successivo ciclo di render, consentendo di chiamare il rispettivo metodo che costruisce l'oggetto con  i materiali desiderati ed infine ri-settando tale variabile a false per evitare la costruzione ciclica dell'oggetto ad ogni frame. Per favorire inoltre la migrazione della scena da un oggetto con dei materiali alla visualizzazione di un altro, è stata prevista la variabile selected_object alla quale, in ciascuna funzione di creazione degli oggetti sviluppata, viene passato l'oggetto costruito. Questo consente di verificare, prima di costruire un ulteriore oggetto se nella scena ne sono già presenti altri. Se si, l'oggetto attuale viene eliminato così da consentire la creazione di quello nuovo evitando sovrapposizioni indesiderate. Infine la variabile is_refract serve ad evitare che l'utente visualizzi la base d'appoggio all'interno dell'enviroment map e quindi ottenendo un risultato poco consono. Questo tipo di transizione farà tornare l'utente ad una situazione in cui viene visualizzata la base e l'oggetto viene istanziato come da default. inoltre, dato che per la rifrazione il background della scena diventerà la cubemap, in ogni metodo di creazione come prima cosa il background verrà ripristinato con il suo colore di default. In sintesi, il codice è così strutturato:
+- All'interno dello script ma non all'interno di una funzione vengono definite le informazioni in merito alla scena, alle variabili necessarie, alla camera, ai materiali metallici, alle luci da usare e alla texture della base;
+- La funzione **SetupOrbitControls()** contiene le istruzioni che consentono di vincolare la navigazione della scena da parte dell'utente, evitando attraversamenti di mesh, rotazioni eccessive oppure allontanamenti dall'oggetto infiniti;
+- La funzione **Update()** consente di richiamare il corretto metodo per costruire l'oggetto con i materiali desiderati a seconda del click effettuato;
+- La funzione **showBase()** e la **hideBase()** consentono di visualizzare e nascondere la base con la texture applicata. La variabile mesh_base viene impostata a null dopo la rimozione e verificata prima dell'inserimento per evitare duplicati;
+- **OnWindowResize()** trasla la posizione del canvas in modo che non venga sovrapposto al menù laterale poichè, come detto prima il canvas stesso è risultato non rispettare le regole strutturali imposte da Foundation;
+- Le funzioni **click_show_base(), click_hide(), click_show_toy(), click_show_metallic() e click_show_enviroment()** hanno il solo scopo di ascoltare il click del pulsante e settare a true la variabile corrispondente;
+- La funzione **Metallic_Hammer** crea il martello con i materiali metallici. I figli del file obj vengono scanditi uno alla volta in modo che ciascuno abbia il materiale desiderato;
+- **SetupToyHammer** contiene la definizione delle variabili uniform per i suoi materiali e la creazione del martello apposito seguendo la stessa modalità del precedente;
+- Infine la funzione **ShowEnviroment** setta come background la cube map, calcola le uniforms apposite e crea un mjolnir il cui unico materiale rispetta la proprietà desiderata. 
 
 ## Eventuali Sviluppi
 
