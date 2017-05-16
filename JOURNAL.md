@@ -36,3 +36,9 @@ to do:
 - Enviroment mapping
 - Limitare rotazione camera solo in caso di presenza della base e consentire una rotazione maggiore in sua assenza
 - Eventualmente feature con rotazione automatica della camera
+
+# 16-05-2017
+Da migliorare:
+- Pulizia codice
+- Pulsante di aggiunta - rimozione base d'appoggio più compatta
+- Aggiungere filtro di Sobel come opzione di visualizzazione
