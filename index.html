@@ -278,6 +278,8 @@
 			varying vec3 vPosition;
 			varying vec2 uVv;
 			uniform vec3 pointLightPosition; // in world space
+            uniform vec3 pointLightPosition2;
+            uniform vec3 pointLightPosition3;
 			uniform vec3 clight;
 			uniform sampler2D specularMap;
 			uniform sampler2D diffuseMap;
@@ -310,15 +312,36 @@
 
 			void main() {
 				vec4 lPosition = viewMatrix * vec4( pointLightPosition, 1.0 );
+                vec4 lPosition2 = viewMatrix * vec4( pointLightPosition2, 1.0 );
+                vec4 lPosition3 = viewMatrix * vec4( pointLightPosition3, 1.0 );
+
 				vec3 l = normalize(lPosition.xyz - vPosition.xyz);
+                vec3 l2 = normalize(lPosition2.xyz - vPosition.xyz);
+                vec3 l3 = normalize(lPosition3.xyz - vPosition.xyz);
+
 				vec3 n = normalize( vNormal );  // interpolation destroys normalization, so we have to normalize
 				vec3 v = normalize( -vPosition);
-				vec3 h = normalize( v + l);
+
+				vec3 h  = normalize( v +  l);
+                vec3 h2 = normalize( v + l2);
+                vec3 h3 = normalize( v + l3);
+
 				// small quantity to prevent divisions by 0
 				float nDotl = max(dot( n, l ),0.000001);
 				float lDoth = max(dot( l, h ),0.000001);
-				float nDoth = max(dot( n, h ),0.000001);
+                float nDoth = max(dot( n, h ),0.000001);
 				float vDoth = max(dot( v, h ),0.000001);
+
+                float nDotl2 = max(dot( n, l2 ),0.000001);
+				float lDoth2 = max(dot( l2, h2 ),0.000001);
+                float nDoth2 = max(dot( n, h2 ),0.000001);
+				float vDoth2 = max(dot( v, h2 ),0.000001);
+                
+                float nDotl3 = max(dot( n, l3 ),0.000001);
+				float lDoth3 = max(dot( l3, h3 ),0.000001);
+                float nDoth3 = max(dot( n, h3 ),0.000001);
+				float vDoth3 = max(dot( v, h3 ),0.000001);
+
 				float nDotv = max(dot( n, v ),0.000001);
 
 				cdiff = texture2D( diffuseMap, uVv*textureRepeat ).rgb;
@@ -332,7 +355,18 @@
 				vec3 fresnel = FSchlick(lDoth);
 				vec3 BRDF = (vec3(1.0)-fresnel)*cdiff/PI + fresnel*GSmith(nDotv,nDotl)*DGGX(nDoth,roughness*roughness)/
 					(4.0*nDotl*nDotv);
-				vec3 outRadiance = PI* clight * nDotl * BRDF;
+
+                vec3 fresnel2 = FSchlick(lDoth2);
+                vec3 BRDF2 = (vec3(1.0)-fresnel2)*cdiff/PI + fresnel2*GSmith(nDotv,nDotl2)*DGGX(nDoth2,roughness*roughness)/
+                (4.0*nDotl2*nDotv);
+
+                vec3 fresnel3 = FSchlick(lDoth3);
+                vec3 BRDF3 = (vec3(1.0)-fresnel3)*cdiff/PI + fresnel3*GSmith(nDotv,nDotl3)*DGGX(nDoth3,roughness*roughness)/
+                (4.0*nDotl3*nDotv);
+                
+				vec3 outRadiance = (PI* clight * nDotl * BRDF) + 
+                                   (PI* clight * nDotl2 * BRDF2) + 
+                                   (PI* clight * nDotl3 * BRDF3);
 				// gamma encode the final value
 				gl_FragColor = vec4(pow( outRadiance, vec3(1.0/2.2)), 1.0);
 			}
@@ -363,7 +397,8 @@
 
   <div class="top-bar">
       <div class="top-bar-left">
-          <ul class="menu">
+          <ul class="menu"> 
+               <li><img src="media/acme-logo.png" alt="Uniud Logo"/></li>
               <li class="menu-text">Mjolnir Visualizer</li>
           </ul>
       </div>
@@ -375,25 +410,51 @@
   </div>
 
   <div class="row">
-      <div class="large-2 medium-2 small-2 columns">
-          <ul class="menu vertical" id="mymenu">
+      <div class="large-2 medium-2 small-2 columns" id="mymenu">
+          <ul class="menu vertical" >
+              <br />
               <li class="menu-text">Customize</li>
+              <br />
               <p id="hint">( Default is Metallic Mjolnir )</p>
-              <li><a class="button expanded" href='javascript:click_show_base()'>Show Base</a></li>
+              <li><a class="button expanded" href="javascript:click_show_used()">Used Mjolnir</a></li>
               <br />
-              <li><a class="button expanded" href='javascript:click_hide()'>Hide Base</a></li>
-              <br />
-              <li><a class="button expanded" href="javascript:click_show_toy()">Hammer Toy</a></li>
+              <li><a class="button expanded" href="javascript:click_show_toy()">Mjolnir Toy</a></li>
               <br />
               <li><a class="button expanded" href="javascript:click_show_metallic()">Metallic Mjolnir</a></li>
               <br />
-              <li><a class="button expanded" href="javascript:click_show_enviroment()">Invisible Hammer</a></li>
+              <li><a class="button expanded" href="javascript:click_show_enviroment()">Invisible Mjolnir</a></li>
+              <br />
+              <li><p id="show">See it in space!</p></li>
+              <li>
+                <div id="move" class="switch medium">
+                    <input class="switch-input" id="yes-no" type="checkbox" name="exampleSwitch" onclick="Space();">
+                    <label class="switch-paddle" for="yes-no">
+                        <span class="show-for-sr">See it in space!</span>
+                        <span class="switch-active" aria-hidden="true">On</span>
+                        <span class="switch-inactive" aria-hidden="true">Off</span>
+                    </label>
+                </div>
+              </li>
           </ul>
-      </div>
-      <div class="large-10 medium-10 small-10 columns ">
-              <canvas class="large-10 medium-10 small-10 columns " id="threejs" width="1024" height="576" ></canvas>
-      </div>
+        </div>
+        <div class="large-10 medium-10 small-10 columns ">
+                <canvas class="large-10 medium-10 small-10 columns " id="threejs" width="1024" height="576" ></canvas>
+        </div>
   </div>
+
+    <div class="row">
+        <br />
+        <br />        
+        <p>
+            Forse potrebbe interessarti anche..<a href=""> More here! </a>
+        </p>
+         
+    </div>
+
+    <div id="foot" >
+            <p>Made by: David La Barbera</p>
+    </div>
+
 
   <script>
 
@@ -403,23 +464,25 @@
 
       //variabili che mi consentono di rimuovere il precedente modello all'occorrenza
       var selected_object = null;
-      var mesh_base = null;
 
       //Variabili per ascoltare il click dei pulsanti
-      var click_base = false;
-      var click_hide_base = false;
       var click_metallico = false;
       var click_giocattolo = false;
       var click_enviroment = false;
+      var click_used_hammer = false;
+
+      //variabile per vedere il particle system
+      var is_on = false;
 
       var is_refract = false;
 
       scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera( 75, 1024 / 576, 0.1, 1000 );
 
     //Prendo l'elemento che fungerà da contenitore al mio renderer tramite il suo id
       var container = document.getElementById("threejs");
-      renderer = new THREE.WebGLRenderer( {canvas: threejs} );
+      renderer = new THREE.WebGLRenderer( {canvas: threejs, antialias: true} );
+
+      camera = new THREE.PerspectiveCamera( 75, container.width / container.height, 0.1, 1000 );
 
     //Adatto le dimensioni del renderer a quelle del canvas usato
       renderer.setSize( container.width, container.height );
@@ -459,6 +522,52 @@
       lightPower:	{ type: "v3", value: new THREE.Vector3() },
       alpha: {type: "f", value: 0}
     };
+    var uniformsUsed = {
+      c_spec:	{ type: "v3", value: new THREE.Vector3() },
+      pointLightPosition1:	{ type: "v3", value: new THREE.Vector3() },
+      pointLightPosition2:	{ type: "v3", value: new THREE.Vector3() },
+      pointLightPosition3:	{ type: "v3", value: new THREE.Vector3() },
+      pointLightPosition4:	{ type: "v3", value: new THREE.Vector3() },
+      lightPower:	{ type: "v3", value: new THREE.Vector3() },
+      alpha: {type: "f", value: 0}
+    };
+
+            //Texture data
+        var uniforms_texture = {
+            specularMap: { type: "t", value: specularMap},
+            diffuseMap:	{ type: "t", value: diffuseMap},
+            roughnessMap:	{ type: "t", value: roughnessMap},
+            pointLightPosition:	{ type: "v3", value: new THREE.Vector3() },
+            pointLightPosition2:	{ type: "v3", value: new THREE.Vector3() },
+            pointLightPosition3:	{ type: "v3", value: new THREE.Vector3() },
+            clight:	{ type: "v3", value: new THREE.Vector3() },
+            textureRepeat: { type: "v2", value: new THREE.Vector2(1,1) }
+        };
+
+        var uniforms_concrete = {
+            specularMap: { type: "t", value: specularMap_concrete},
+            diffuseMap:	{ type: "t", value: diffuseMap_concrete},
+            roughnessMap:	{ type: "t", value: roughnessMap_concrete},
+            pointLightPosition:	{ type: "v3", value: new THREE.Vector3() },
+            pointLightPosition2:	{ type: "v3", value: new THREE.Vector3() },
+            pointLightPosition3:	{ type: "v3", value: new THREE.Vector3() },
+            clight:	{ type: "v3", value: new THREE.Vector3() },
+            textureRepeat: { type: "v2", value: new THREE.Vector2(1,1) }
+        }
+
+        var diffuseMap = loadTexture( "media/Wood_StaggeredFloorPlanks_Diffuse.png" );
+        var specularMap = loadTexture( "media/Wood_StaggeredFloorPlanks_Specular.png" );
+        var roughnessMap = loadTexture( "media/Wood_StaggeredFloorPlanks_Roughness.png" );
+
+        var diffuseMap_concrete = loadTexture( "media/Concrete_ChunkybrokenWall_Diffuse.png" );
+        var specularMap_concrete = loadTexture( "media/Concrete_ChunkybrokenWall_Specular.png" );
+        var roughnessMap_concrete = loadTexture( "media/Concrete_ChunkybrokenWall_Roughness.png" );
+
+        var vs_t = document.getElementById("vertex_texture").textContent;
+        var fs_t = document.getElementById("fragment_texture").textContent;
+
+        var texture_material = new THREE.ShaderMaterial({ uniforms: uniforms_texture, vertexShader: vs_t, fragmentShader: fs_t });
+        var concrete_texture_material = new THREE.ShaderMaterial({ uniforms: uniforms_concrete, vertexShader: vs_t, fragmentShader: fs_t });
 
     var vs = document.getElementById("vertex").textContent;
     var fs = document.getElementById("fragment").textContent;
@@ -469,32 +578,15 @@
       //Metallic Materials
     var gold_material = new THREE.ShaderMaterial({ uniforms: uniformsGold, vertexShader: vs, fragmentShader: fs });
     var silver_material = new THREE.ShaderMaterial({ uniforms: uniformsSilver, vertexShader: vs, fragmentShader: fs});
-
-      //Texture data
-      var diffuseMap = THREE.ImageUtils.loadTexture( "media/Wood_StaggeredFloorPlanks_Diffuse.png" );
-      var specularMap = THREE.ImageUtils.loadTexture( "media/Wood_StaggeredFloorPlanks_Specular.png" );
-      var roughnessMap = THREE.ImageUtils.loadTexture( "media/Wood_StaggeredFloorPlanks_Roughness.png" );
-
-      var uniforms_texture = {
-          specularMap: { type: "t", value: specularMap},
-          diffuseMap:	{ type: "t", value: diffuseMap},
-          roughnessMap:	{ type: "t", value: roughnessMap},
-          pointLightPosition:	{ type: "v3", value: new THREE.Vector3() },
-          clight:	{ type: "v3", value: new THREE.Vector3() },
-          textureRepeat: { type: "v2", value: new THREE.Vector2(1,1) }
-      };
-
-      var vs_t = document.getElementById("vertex_texture").textContent;
-      var fs_t = document.getElementById("fragment_texture").textContent;
-
-      var texture_material = new THREE.ShaderMaterial({ uniforms: uniforms_texture, vertexShader: vs_t, fragmentShader: fs_t });
+    var used_material = new THREE.ShaderMaterial({ uniforms: uniformsUsed, vertexShader: vs, fragmentShader: fs});
 
       //On start default visualization
     Metallic_Hammer();
 
     //Geometria e Materiale per le luci
     geometryLight = new THREE.SphereGeometry( 0.05, 0.05, 0.05);
-    materialLight = new THREE.MeshBasicMaterial ({color: 0xffffff, wireframe:true});
+      //materiale invisibile cosicchè non si vedano le fonti di luce
+    materialLight = new THREE.MeshBasicMaterial( { transparent: true, opacity: 0 } )
 
     //Setup luci scena su ogni materiale
     //Prima Luce
@@ -504,6 +596,7 @@
 
     uniformsGold.pointLightPosition1.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
     uniformsSilver.pointLightPosition1.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
+    uniformsUsed.pointLightPosition1.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
 
       //Seconda Luce
     lightB = new THREE.Mesh( geometryLight, materialLight);
@@ -512,6 +605,8 @@
 
     uniformsGold.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
     uniformsSilver.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
+    uniformsUsed.pointLightPosition2.value = new THREE.Vector3(lightB.position.x, lightB.position.y, lightB.position.z);
+
 
       //Terza Luce
     lightC = new THREE.Mesh( geometryLight, materialLight);
@@ -520,6 +615,8 @@
 
     uniformsGold.pointLightPosition3.value = new THREE.Vector3(lightC.position.x, lightC.position.y, lightC.position.z);
     uniformsSilver.pointLightPosition3.value = new THREE.Vector3(lightC.position.x, lightC.position.y, lightC.position.z);
+    uniformsUsed.pointLightPosition3.value = new THREE.Vector3(lightC.position.x, lightC.position.y, lightC.position.z);
+
 
       //Quarta Luce
     lightD = new THREE.Mesh( geometryLight, materialLight);
@@ -528,25 +625,42 @@
 
     uniformsGold.pointLightPosition4.value = new THREE.Vector3(lightD.position.x, lightD.position.y, lightD.position.z);
     uniformsSilver.pointLightPosition4.value = new THREE.Vector3(lightD.position.x, lightD.position.y, lightD.position.z);
+    uniformsUsed.pointLightPosition4.value = new THREE.Vector3(lightD.position.x, lightD.position.y, lightD.position.z);
 
       //Setup uniforms
     uniformsGold.c_spec.value = new THREE.Vector3( 1.0, 0.79, 0.29 );
-    uniformsGold.lightPower.value = new THREE.Vector3( 8000.0, 8000.0, 8000.0 );
+    uniformsGold.lightPower.value = new THREE.Vector3( 5000.0, 5000.0, 5000.0 );
     uniformsGold.alpha.value = 0.4;
 
     uniformsSilver.c_spec.value = new THREE.Vector3( 0.8, 0.8, 0.8 );
     uniformsSilver.lightPower.value = new THREE.Vector3( 6000.0, 6000.0, 6000.0 );
     uniformsSilver.alpha.value = 0.4;
 
-      uniforms_texture.pointLightPosition.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
-      uniforms_texture.clight.value = new THREE.Vector3(1.0, 1.0, 1.0);
-      uniforms_texture.textureRepeat.value = new THREE.Vector2( 1.0, 1.0);
-      uniforms_texture.diffuseMap.value = diffuseMap;
-      uniforms_texture.specularMap.value = specularMap;
-      uniforms_texture.roughnessMap.value = roughnessMap;
+    uniformsUsed.c_spec.value = new THREE.Vector3( 0.15, 0.55, 0.99 );
+    uniformsUsed.lightPower.value = new THREE.Vector3( 6000.0, 6000.0, 6000.0 );
+    uniformsUsed.alpha.value = 0.4;
 
-      SetupOrbitControls();
+    uniforms_texture.pointLightPosition.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
+    uniforms_texture.pointLightPosition2.value = new THREE.Vector3(lightC.position.x, lightC.position.y, lightC.position.z);
+    uniforms_texture.pointLightPosition3.value = new THREE.Vector3(lightD.position.x, lightD.position.y, lightD.position.z);
+    uniforms_texture.clight.value = new THREE.Vector3(1.0, 1.0, 1.0);
+    uniforms_texture.textureRepeat.value = new THREE.Vector2( 1.0, 1.0);
+    uniforms_texture.diffuseMap.value = diffuseMap;
+    uniforms_texture.specularMap.value = specularMap;
+    uniforms_texture.roughnessMap.value = roughnessMap;
+    uniforms_texture.textureRepeat.value = new THREE.Vector2(0.05, 0.05);
 
+    uniforms_concrete.pointLightPosition.value = new THREE.Vector3(lightA.position.x, lightA.position.y, lightA.position.z);
+    uniforms_concrete.pointLightPosition2.value = new THREE.Vector3(lightC.position.x, lightC.position.y, lightC.position.z);
+    uniforms_concrete.pointLightPosition3.value = new THREE.Vector3(lightD.position.x, lightD.position.y, lightD.position.z);
+    uniforms_concrete.clight.value = new THREE.Vector3(1.0, 1.0, 1.0);
+    uniforms_concrete.textureRepeat.value = new THREE.Vector2( 1.0, 1.0);
+    uniforms_concrete.diffuseMap.value = diffuseMap_concrete;
+    uniforms_concrete.specularMap.value = specularMap_concrete;
+    uniforms_concrete.roughnessMap.value = roughnessMap_concrete;
+    uniforms_concrete.textureRepeat.value = new THREE.Vector2(0.1, -0.1);
+
+    SetupOrbitControls();
 
       function SetupOrbitControls() {
           controls = new THREE.OrbitControls( camera );
@@ -564,14 +678,9 @@
     function Update() {
       requestAnimationFrame( Update );
         //Se clickBase è true allora visualizzo la base
-        if(click_base){
-            showBase(scene, texture_material);
-            //lo setto di nuovo a false per evitare l'aggiunta ad ogni frame
-            click_base = false;
-        }
-        if(click_hide_base){
-            hideBase();
-            click_hide_base = false;
+        if(click_used_hammer){
+            TextureHammer();
+            click_used_hammer = false;
         }
         if(click_metallico){
             Metallic_Hammer();
@@ -594,28 +703,6 @@
       renderer.render(scene, camera);
     }
 
-    //Funzione per caricare la base su cui posa il martello
-    function showBase(scena, texture) {
-        scene.background = new THREE.Color( 0xf1f3f4 );
-        if(is_refract){
-            Metallic_Hammer();
-        }
-
-        if(mesh_base == null){
-            //Posiziono la base che verrà visualizzata la maggior parte del tempo
-            var geom = new THREE.CylinderGeometry( 50, 50, 0.05, 32 );
-            mesh_base = new THREE.Mesh( geom, texture );
-            mesh_base.position.y = -9;
-            mesh_base.position.x = 4;
-            scena.add( mesh_base );
-        }
-    }
-    function hideBase() {
-        if(mesh_base != null){
-            scene.remove(mesh_base);
-            mesh_base = null;
-        }
-    }
 
       function onWindowResize(){
           //Se le dimensioni della finestra diventano eccessive
@@ -627,14 +714,9 @@
           }
 
       }
-      //Funzione che ascolta il click del pulsante Show Base
-      function click_show_base() {
-          click_base = true;
-      }
 
-      //Funzione che ascolta il click del pulsante Hide Base
-      function click_hide() {
-          click_hide_base = true;
+      function click_show_used(){
+          click_used_hammer = true;
       }
 
       //Funzione che ascolta il click sul pulsante metallic mjolnir
@@ -654,10 +736,7 @@
       //Funzione per visualizzare la versione metallica del martello
       function Metallic_Hammer() {
             //Se sto visualizzando un martello allora lo elimino e inserisco quello nuovo;
-          if(selected_object != null){
-              scene.remove(selected_object);
-          }
-          scene.background = new THREE.Color( 0xf1f3f4 );
+           adjustBackground();
 
           var childCounter = 0;
           var loader = new THREE.OBJLoader();
@@ -671,10 +750,10 @@
                          child.material = silver_material;
                    }
                    else if(childCounter == 2) {
-                         child.material = silver_material;
+                         child.material = texture_material;
                    }
                    else if(childCounter == 14){
-                       child.material = silver_material;
+                       child.material = texture_material;
                    }
                    else if(childCounter == 16){
                        child.material = silver_material;
@@ -682,7 +761,6 @@
                    else{
                          child.material = gold_material;
                    }
-                   child.geometry.computeVertexNormals();
                    childCounter++;
                 }
               } );
@@ -696,15 +774,11 @@
 
       function SetupToyHammer(){
 
-          if(selected_object != null){
-              scene.remove(selected_object);
-          }
-
-          scene.background = new THREE.Color( 0xf1f3f4 );
+           adjustBackground();
 
           //Gomma rossa
           var first_materialParameters = {
-				cdiff_red: 0.6,
+				cdiff_red: 0.5,
 				cdiff_green: 0.0,
 				cdiff_blue: 0.0,
 				cspec_red: 0.04,
@@ -714,13 +788,13 @@
 			}
 
             var second_materialParameters = {
-				cdiff_red: 0.23,
-				cdiff_green: 0.02,
-				cdiff_blue: 0.0,
+				cdiff_red: 0.2,
+				cdiff_green: 0.2,
+				cdiff_blue: 0.2,
 				cspec_red: 0.04,
 				cspec_green: 0.04,
 				cspec_blue: 0.04,
-				roughness: 0.3
+				roughness: 0.1
 			}
 
             var decorationParameters = {
@@ -816,7 +890,6 @@
                             else{
                                     child.material = SecondToyMaterial;
                             }
-                            child.geometry.computeVertexNormals();
                             childCounter++;
                         }
                     } );
@@ -859,53 +932,177 @@
       }
       
       function ShowEnviroment() {
+            //Appena attivo il particle system da qui
+            if(!is_on){
+                if(selected_object != null){
+                    scene.remove(selected_object);
+                }
 
-          if(selected_object != null){
+                var loader = new THREE.CubeTextureLoader();
+                loader.setPath( 'media/' );
+
+                var textureCube = loader.load( [
+                    'posx.jpg', 'negx.jpg',
+                    'posy.jpg', 'negy.jpg',
+                    'posz.jpg', 'negz.jpg'
+                ] );
+
+                scene.background = textureCube;
+
+                var uniforms_ref = { tReflection: { type: "t", value: textureCube } };
+
+                var vs_r = document.getElementById("vertex_refraction").textContent;
+                var fs_r = document.getElementById("fragment_refraction").textContent;
+
+                var material_r = new THREE.ShaderMaterial({ uniforms: uniforms_ref, vertexShader: vs_r, fragmentShader: fs_r });
+
+                    var loader = new THREE.OBJLoader();
+                    loader.load( 'models/hammer.obj', function ( object ) {
+                        object.traverse( function ( child ) {
+                            if ( child instanceof THREE.Mesh ) {
+                                child.material = material_r;
+                            }
+                        } );
+                        scene.add(object);
+                        //Ridimensiono e ruoto
+                        object.scale.set(0.2, 0.2, 0.2);
+                        object.rotation.z = -(45 * Math.PI/180);
+                        selected_object = object;
+                    } );
+            }else{
+                alert("Care, you can't go here from the particle system view!");
+            }
+      }
+
+      function TextureHammer(){
+
+           adjustBackground();
+           var childCounter = 0;
+                var loader = new THREE.OBJLoader();
+                loader.load( 'models/hammer.obj', function ( object ) {
+                        object.traverse( function ( child ) {
+                        if ( child instanceof THREE.Mesh ) {
+                            if(childCounter == 0) {
+                                    child.material = used_material;
+                            }
+                            else if(childCounter == 1) {
+                                    child.material = silver_material;
+                            }
+                            else if(childCounter == 2) {
+                                    child.material = concrete_texture_material;
+                            } 
+                            else if(childCounter == 14){
+                                    child.material = concrete_texture_material;
+                            }
+                            else if(childCounter == 16){
+                                    child.material = silver_material;
+                            }
+                            else if(childCounter == 17){
+                                    child.material = gold_material;
+                            }
+                            else if(childCounter == 18){
+                                    child.material = gold_material;
+                            }
+                            else if(childCounter == 19){
+                                    child.material = gold_material;
+                            }
+                            else if(childCounter == 20){
+                                    child.material = gold_material;
+                            }
+                            else if(childCounter == 21){
+                                    child.material = gold_material;
+                            }
+                            else if(childCounter == 22){
+                                    child.material = gold_material;
+                            }
+                            else if(childCounter == 23){
+                                    child.material = gold_material;
+                            }
+                            else if(childCounter == 24){
+                                    child.material = gold_material;
+                            }
+                            else{
+                                    child.material = texture_material;
+                            }
+                            
+                            childCounter++;
+                        }
+                    } );
+                    
+                    scene.add(object);
+                    //Ridimensiono e ruoto
+                    object.scale.set(0.2, 0.2, 0.2);
+                    object.rotation.z = -(45 * Math.PI/180);
+                    selected_object = object;
+                } );
+
+      }
+
+      //Funzione per riutilizzare il codice ed evitare configurazioni di sfondo non consone
+      function adjustBackground(){
+        if(selected_object != null){
               scene.remove(selected_object);
           }
-            //Nascono la base d'appoggio se necessario
-          hideBase();
-
-          var loader = new THREE.CubeTextureLoader();
-          loader.setPath( 'media/' );
-
-          var textureCube = loader.load( [
-              'posx.jpg', 'negx.jpg',
-              'posy.jpg', 'negy.jpg',
-              'posz.jpg', 'negz.jpg'
-          ] );
-
-          scene.background = textureCube;
-
-          var uniforms_ref = { tReflection: { type: "t", value: textureCube } };
-
-          var vs_r = document.getElementById("vertex_refraction").textContent;
-          var fs_r = document.getElementById("fragment_refraction").textContent;
-
-          var material_r = new THREE.ShaderMaterial({ uniforms: uniforms_ref, vertexShader: vs_r, fragmentShader: fs_r });
-
-            var loader = new THREE.OBJLoader();
-            loader.load( 'models/hammer.obj', function ( object ) {
-                object.traverse( function ( child ) {
-                    if ( child instanceof THREE.Mesh ) {
-                        child.material = material_r;
-                        child.geometry.computeVertexNormals();
-                    }
-                } );
-                scene.add(object);
-                //Ridimensiono e ruoto
-                object.scale.set(0.2, 0.2, 0.2);
-                object.rotation.z = -(45 * Math.PI/180);
-                selected_object = object;
-            } );
+          if(!is_on){
+             scene.background = new THREE.Color( 0xf1f3f4 );
+          }
       }
+
+      function loadTexture(file) {
+          var texture = new THREE.TextureLoader().load( file , function ( texture ) {
+
+              texture.minFilter = THREE.LinearMipMapLinearFilter;
+              texture.anisotropy = renderer.getMaxAnisotropy();
+              texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+              texture.offset.set( 0, 0 );
+              texture.needsUpdate = true;
+              Render();
+          } )
+          return texture;
+      }
+
+      function createParticleSystem() {
+        scene.background = new THREE.Color( 0x000000 );
+        var particles = new THREE.Geometry();
+        for (var p = 0; p < 2000; p++) { 
+            var particle = new THREE.Vector3(Math.random() * 500 - 250, 
+                                             Math.random() * 500 - 250,
+                                             Math.random() * 500 - 250);
+            particles.vertices.push(particle);
+        }
+        var particleMaterial = new THREE.PointsMaterial(
+                {color: 0xffffff, 
+                size: 4,
+                map: THREE.ImageUtils.loadTexture("media/snowflake.png"),
+                transparent: true,
+                });
+        particleSystem = new THREE.Points(particles, particleMaterial);
+        return particleSystem;  
+    }
+    
+    function Space(){
+        //Se mi trovo nella situazione con il cubeMapping mi riporto in una più consona
+        if(is_refract){
+            Metallic_Hammer();
+        }
+        //Ascolto lo switch e rispondo di conseguenza in relazione al valore di is_on
+        if(!is_on){
+            particleSystem = createParticleSystem();
+            scene.add(particleSystem);
+            is_on = true;
+        }
+        else{
+            scene.remove(particleSystem);
+            particleSystem = null;
+            scene.background = new THREE.Color( 0xf1f3f4 );
+            is_on = false;
+        }
+    }
 
       is_refract = true;
 
       Update();
 
   </script>
-
   </body>
-
 </html>

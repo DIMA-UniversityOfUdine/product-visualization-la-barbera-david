@@ -9,7 +9,50 @@
 }
 
 #hint{
-    font-size: 12px;
+    font-size: 13px;
     text-align: center;
-    color: #5e5e5e;
+}
+
+.menu-text{
+    text-align: center;
+    background-color: #404040;
+    color: #ffffff;
+}
+
+#show{
+    font-size: 16px;
+    text-align: center;
+    font-weight: bold;
+}
+
+body{
+    background-color: #a6a6a6;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    
+}
+
+html, body {margin: 0; height: 100%; overflow: hidden}
+
+.top-bar{
+    background-color: #404040;
+}
+
+#move{
+    float: left;
+    left: 20%;
+}
+
+.switch-active, .switch-inactive{
+    color: #000000;
+}
+
+#foot{
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-color: #404040;
+    text-align: right;
+    font-size: 12px;
+    color: #a6a6a6;
 }
