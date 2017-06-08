@@ -42,3 +42,8 @@ Da migliorare:
 - Pulizia codice
 - Pulsante di aggiunta - rimozione base d'appoggio più compatta
 - Aggiungere filtro di Sobel come opzione di visualizzazione
+
+# 08-06-2017
+- Rimossa base di appoggio
+- Aggiunto particle system ed ulteriore modalità di visualizzazione
+- Migliorie grafiche generali

@@ -620,7 +620,7 @@
 
       //Quarta Luce
     lightD = new THREE.Mesh( geometryLight, materialLight);
-    lightD.position.set( -18.0, 1.0, 0.0 );
+    lightD.position.set( -18.0, -5.0, 0.0 );
     scene.add( lightD );
 
     uniformsGold.pointLightPosition4.value = new THREE.Vector3(lightD.position.x, lightD.position.y, lightD.position.z);
@@ -986,7 +986,7 @@
                                     child.material = used_material;
                             }
                             else if(childCounter == 1) {
-                                    child.material = silver_material;
+                                    child.material = used_material;
                             }
                             else if(childCounter == 2) {
                                     child.material = concrete_texture_material;
