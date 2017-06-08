@@ -47,3 +47,7 @@ Da migliorare:
 - Rimossa base di appoggio
 - Aggiunto particle system ed ulteriore modalità di visualizzazione
 - Migliorie grafiche generali
+- Rimozione mesh luci dalla scena
+- Aggiunta antialiasing
+- Smoothing delle normali
+- Riduzione FOV camera
